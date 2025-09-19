@@ -120,7 +120,7 @@ export function OrderModal({ isOpen, onClose, package: selectedPackage }: OrderM
       setOrderComplete(true)
       setStep(2)
     } catch (error) {
-      console.error("[v0] Order creation error:", error)
+      console.error("Order creation error:", error)
       alert("Failed to generate payment instructions. Please try again.")
     } finally {
       setIsProcessing(false)

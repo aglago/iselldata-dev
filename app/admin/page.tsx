@@ -10,21 +10,21 @@ export default function AdminPage() {
   const router = useRouter()
 
   useEffect(() => {
-    console.log("[v0] Admin page - checking auth:", { isAuthenticated, user })
+    console.log("Admin page - checking auth:", { isAuthenticated, user })
 
     if (!isAuthenticated) {
-      console.log("[v0] Not authenticated, redirecting to login")
+      console.log("Not authenticated, redirecting to login")
       router.push("/login")
       return
     }
 
     if (user?.role !== "admin") {
-      console.log("[v0] Not admin role, redirecting to home")
+      console.log("Not admin role, redirecting to home")
       router.push("/")
       return
     }
 
-    console.log("[v0] Admin access granted")
+    console.log("Admin access granted")
   }, [isAuthenticated, user, router])
 
   if (!isAuthenticated || user?.role !== "admin") {

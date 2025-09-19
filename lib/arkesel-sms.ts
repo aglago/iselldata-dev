@@ -20,7 +20,7 @@ export class ArkeselSMS {
 
   async sendSMS({ to, message }: SMSMessage): Promise<ArkeselSMSResponse> {
     try {
-      console.log("[v0] Sending SMS via Arkesel:", { to, message: message.substring(0, 50) + "..." })
+      console.log("Sending SMS via Arkesel:", { to, message: message.substring(0, 50) + "..." })
 
       const response = await fetch(`${this.baseUrl}/send`, {
         method: "POST",
@@ -36,7 +36,7 @@ export class ArkeselSMS {
       })
 
       const data = await response.json()
-      console.log("[v0] Arkesel SMS response:", data)
+      console.log("Arkesel SMS response:", data)
 
       if (!response.ok) {
         throw new Error(`SMS API error: ${data.message || "Unknown error"}`)
@@ -48,7 +48,7 @@ export class ArkeselSMS {
         data: data,
       }
     } catch (error) {
-      console.error("[v0] SMS sending failed:", error)
+      console.error("SMS sending failed:", error)
       return {
         status: "error",
         message: error instanceof Error ? error.message : "SMS sending failed",

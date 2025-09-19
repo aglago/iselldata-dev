@@ -28,17 +28,17 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    console.log("[v0] Login form submitted with:", { email, password })
+    console.log("Login form submitted with:", { email, password })
 
     const success = await login(email, password)
 
-    console.log("[v0] Login function returned:", success)
+    console.log("Login function returned:", success)
 
     if (success) {
-      console.log("[v0] Login successful, redirecting to admin")
+      console.log("Login successful, redirecting to admin")
       router.push("/admin")
     } else {
-      console.log("[v0] Login failed, showing error")
+      console.log("Login failed, showing error")
       setError("Invalid email or password. Please try again.")
     }
 

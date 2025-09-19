@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
 
-    console.log("[v0] Hubnet webhook received:", payload)
+    console.log("Hubnet webhook received:", payload)
 
     // Process Hubnet status update
     const result = await processHubnetWebhook(payload)
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       message: "Hubnet webhook processed successfully",
     })
   } catch (error) {
-    console.error("[v0] Hubnet webhook processing error:", error)
+    console.error("Hubnet webhook processing error:", error)
     return NextResponse.json(
       {
         error: "Hubnet webhook processing failed",
@@ -47,7 +47,7 @@ async function processHubnetWebhook(payload: any) {
       data,
     } = payload
 
-    console.log("[v0] Processing Hubnet status update:", {
+    console.log("Processing Hubnet status update:", {
       orderId: reference,
       transactionId: transaction_id,
       status,
@@ -61,7 +61,7 @@ async function processHubnetWebhook(payload: any) {
 
     // In production, update order status in database
     // For now, just log the status change
-    console.log(`[v0] Order ${reference} status: ${isSuccessful ? "DELIVERED" : isFailed ? "FAILED" : "PENDING"}`)
+    console.log(`Order ${reference} status: ${isSuccessful ? "DELIVERED" : isFailed ? "FAILED" : "PENDING"}`)
 
     return {
       success: true,
@@ -77,7 +77,7 @@ async function processHubnetWebhook(payload: any) {
       code,
     }
   } catch (error) {
-    console.error("[v0] Hubnet webhook payload processing error:", error)
+    console.error("Hubnet webhook payload processing error:", error)
     return { success: false }
   }
 }
@@ -95,14 +95,14 @@ async function handleStatusNotification(result: any) {
 
     if (isDelivered) {
       await smsService.sendDeliveryConfirmation(phone, orderId, networkDisplay, packageSize)
-      console.log(`[v0] Delivery confirmation sent for order ${orderId}`)
+      console.log(`Delivery confirmation sent for order ${orderId}`)
     } else if (isFailed) {
       await sendFailureNotification(phone, orderId, reason || "Unknown error")
-      console.log(`[v0] Failure notification sent for order ${orderId}`)
+      console.log(`Failure notification sent for order ${orderId}`)
     }
     // If status is still pending, no SMS needed yet
   } catch (error) {
-    console.error("[v0] Failed to send status notification:", error)
+    console.error("Failed to send status notification:", error)
   }
 }
 
@@ -119,13 +119,13 @@ async function sendFailureNotification(phoneNumber: string, orderId: string, rea
   try {
     const message = `Sorry, we couldn't deliver your data bundle. Order: ${orderId}. Reason: ${reason}. Your payment will be refunded within 24 hours. Contact support: 050 958 1027 - GhanaData Pro`
 
-    console.log(`[v0] Failure SMS to ${phoneNumber}: ${message}`)
+    console.log(`Failure SMS to ${phoneNumber}: ${message}`)
 
     // In production, integrate with real SMS provider
     // For now, simulate SMS sending
     return new Promise((resolve) => setTimeout(resolve, 500))
   } catch (error) {
-    console.error("[v0] Failed to send failure notification:", error)
+    console.error("Failed to send failure notification:", error)
   }
 }
 

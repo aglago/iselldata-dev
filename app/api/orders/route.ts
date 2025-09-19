@@ -6,9 +6,9 @@ import { smsService } from "@/lib/arkesel-sms"
 export async function POST(request: NextRequest) {
   try {
     const orderData = await request.json()
-    console.log("[v0] Creating Supabase client...")
+    console.log("Creating Supabase client...")
     const supabase = await createClient()
-    console.log("[v0] Supabase client created successfully")
+    console.log("Supabase client created successfully")
 
     const orderId = `GD${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`
     const trackingId = `TRK${Math.random().toString(36).substr(2, 8).toUpperCase()}`
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (customerError) {
-        console.error("[v0] Customer creation error:", customerError)
+        console.error("Customer creation error:", customerError)
         return NextResponse.json({ success: false, message: "Failed to create customer record" }, { status: 500 })
       }
       customerId = newCustomer.id
@@ -74,11 +74,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orderError) {
-      console.error("[v0] Order creation error:", orderError)
+      console.error("Order creation error:", orderError)
       return NextResponse.json({ success: false, message: "Failed to create order" }, { status: 500 })
     }
 
-    console.log("[v0] New order created in database:", newOrder)
+    console.log("New order created in database:", newOrder)
 
     await smsService.sendOrderConfirmation(
       orderData.customer.phoneNumber,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       message: "Order placed successfully. Payment instructions and tracking ID sent via SMS.",
     })
   } catch (error) {
-    console.error("[v0] Order processing error:", error)
+    console.error("Order processing error:", error)
     return NextResponse.json({ success: false, message: "Failed to process order" }, { status: 500 })
   }
 }
@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest) {
         .eq("order_id", orderId)
 
       if (updateError) {
-        console.error("[v0] Payment status update error:", updateError)
+        console.error("Payment status update error:", updateError)
         return NextResponse.json({ success: false, message: "Failed to update payment status" }, { status: 500 })
       }
 
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
       message: "Order status updated",
     })
   } catch (error) {
-    console.error("[v0] Order update error:", error)
+    console.error("Order update error:", error)
     return NextResponse.json({ success: false, message: "Failed to update order" }, { status: 500 })
   }
 }
@@ -157,14 +157,14 @@ async function processHubnetDataDelivery(orderId: string, paymentReference: stri
       .single()
 
     if (orderError || !order) {
-      console.error("[v0] Order not found:", orderError)
+      console.error("Order not found:", orderError)
       return {
         success: false,
         message: "Order not found in database",
       }
     }
 
-    console.log(`[v0] Processing Hubnet data delivery for order: ${orderId}`)
+    console.log(`Processing Hubnet data delivery for order: ${orderId}`)
 
     const packageSizeGB = Number.parseFloat(order.package_size.replace("GB", ""))
 
@@ -197,7 +197,7 @@ async function processHubnetDataDelivery(orderId: string, paymentReference: stri
       }
     } else {
       const errorMessage = hubnetResult.data?.message || hubnetResult.reason || "Unknown error"
-      console.error("[v0] Hubnet delivery failed:", hubnetResult)
+      console.error("Hubnet delivery failed:", hubnetResult)
 
       await supabase
         .from("orders")
@@ -216,7 +216,7 @@ async function processHubnetDataDelivery(orderId: string, paymentReference: stri
       }
     }
   } catch (error) {
-    console.error("[v0] Hubnet data delivery error:", error)
+    console.error("Hubnet data delivery error:", error)
     return {
       success: false,
       message: "Failed to deliver data bundle - network error",

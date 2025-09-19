@@ -9,18 +9,18 @@ export async function POST(request: NextRequest) {
     const provider = headersList.get("x-payment-provider") || "unknown"
 
     if (!verifyWebhookSignature(signature, provider)) {
-      console.log("[v0] Invalid webhook signature from provider:", provider)
+      console.log("Invalid webhook signature from provider:", provider)
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
     }
 
     const payload = await request.json()
-    console.log("[v0] Payment webhook received from", provider, ":", payload)
+    console.log("Payment webhook received from", provider, ":", payload)
 
     // Process payment confirmation based on provider
     const result = await processPaymentWebhook(payload, provider)
 
     if (result.success) {
-      console.log("[v0] Payment confirmed, triggering data delivery for order:", result.orderId)
+      console.log("Payment confirmed, triggering data delivery for order:", result.orderId)
 
       await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/orders`, {
         method: "PATCH",
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: "Payment webhook processed" })
   } catch (error) {
-    console.error("[v0] Payment webhook processing error:", error)
+    console.error("Payment webhook processing error:", error)
     return NextResponse.json({ error: "Payment webhook processing failed" }, { status: 500 })
   }
 }

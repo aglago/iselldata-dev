@@ -7,12 +7,12 @@ export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-  console.log("[v0] Supabase URL found:", !!supabaseUrl)
-  console.log("[v0] Supabase Key found:", !!supabaseAnonKey)
+  console.log("Supabase URL found:", !!supabaseUrl)
+  console.log("Supabase Key found:", !!supabaseAnonKey)
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.log(
-      "[v0] Available env vars:",
+      "Available env vars:",
       Object.keys(process.env).filter((key) => key.includes("SUPABASE")),
     )
     throw new Error("Supabase environment variables not found")

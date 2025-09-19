@@ -87,7 +87,7 @@ export function OrdersManagement() {
 
   const handlePlaceOrder = async (orderId: string) => {
     try {
-      console.log("[v0] Placing order to Hubnet:", orderId)
+      console.log("Placing order to Hubnet:", orderId)
       const response = await fetch("/api/place-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,12 +101,12 @@ export function OrdersManagement() {
         )
         setOrders(updatedOrders)
         localStorage.setItem("admin_orders", JSON.stringify(updatedOrders))
-        console.log("[v0] Order placed successfully")
+        console.log("Order placed successfully")
       } else {
-        console.error("[v0] Failed to place order")
+        console.error("Failed to place order")
       }
     } catch (error) {
-      console.error("[v0] Error placing order:", error)
+      console.error("Error placing order:", error)
     }
   }
 
@@ -116,14 +116,14 @@ export function OrdersManagement() {
         const storedOrders = localStorage.getItem("admin_orders")
         if (storedOrders) {
           const parsedOrders = JSON.parse(storedOrders)
-          console.log("[v0] Fetched orders from localStorage:", parsedOrders)
+          console.log("Fetched orders from localStorage:", parsedOrders)
           setOrders(parsedOrders)
         } else {
-          console.log("[v0] No orders found in localStorage")
+          console.log("No orders found in localStorage")
           setOrders([])
         }
       } catch (error) {
-        console.error("[v0] Error fetching orders:", error)
+        console.error("Error fetching orders:", error)
         setOrders([])
       } finally {
         setLoading(false)
@@ -280,7 +280,7 @@ export function OrdersManagement() {
                                 size="sm"
                                 onClick={() => {
                                   // View screenshot logic
-                                  console.log("[v0] Viewing screenshot for order:", order.id)
+                                  console.log("Viewing screenshot for order:", order.id)
                                 }}
                               >
                                 <Eye className="h-4 w-4 mr-1" />

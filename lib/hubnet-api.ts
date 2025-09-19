@@ -75,7 +75,7 @@ class HubnetAPIClient {
 
   async checkBalance(): Promise<BalanceResponse> {
     try {
-      console.log("[v0] Checking Hubnet balance")
+      console.log("Checking Hubnet balance")
 
       const response = await fetch(`${this.baseUrl}/check_balance`, {
         method: "GET",
@@ -83,7 +83,7 @@ class HubnetAPIClient {
       })
 
       const data = await response.json()
-      console.log("[v0] Balance check response:", data)
+      console.log("Balance check response:", data)
 
       return {
         status: response.ok && data.status,
@@ -91,7 +91,7 @@ class HubnetAPIClient {
         currency: data.currency || "GHS",
       }
     } catch (error) {
-      console.error("[v0] Balance check error:", error)
+      console.error("Balance check error:", error)
       return {
         status: false,
         balance: 0,
@@ -102,7 +102,7 @@ class HubnetAPIClient {
 
   async purchaseDataBundle(request: HubnetDataRequest): Promise<HubnetResponse> {
     try {
-      console.log("[v0] Hubnet purchase request:", request)
+      console.log("Hubnet purchase request:", request)
 
       const endpoint = `${this.baseUrl}/${request.network}-new-transaction`
 
@@ -114,7 +114,7 @@ class HubnetAPIClient {
         ...(request.webhook && { webhook: request.webhook }),
       }
 
-      console.log("[v0] Hubnet API payload:", payload)
+      console.log("Hubnet API payload:", payload)
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -123,11 +123,11 @@ class HubnetAPIClient {
       })
 
       const data = await response.json()
-      console.log("[v0] Hubnet API response:", data)
+      console.log("Hubnet API response:", data)
 
       return data
     } catch (error) {
-      console.error("[v0] Hubnet API error:", error)
+      console.error("Hubnet API error:", error)
       return {
         status: false,
         reason: "Network Error",
@@ -169,7 +169,7 @@ class HubnetAPIClient {
         webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/hubnet`,
       }
 
-      console.log("[v0] Making Hubnet API call for order:", orderId)
+      console.log("Making Hubnet API call for order:", orderId)
       const response = await this.purchaseDataBundle(request)
 
       const { error: transactionError } = await supabase.from("transactions").insert({
@@ -181,7 +181,7 @@ class HubnetAPIClient {
       })
 
       if (transactionError) {
-        console.error("[v0] Failed to save transaction:", transactionError)
+        console.error("Failed to save transaction:", transactionError)
       }
 
       if (response.status && response.code === "0000") {
@@ -196,13 +196,13 @@ class HubnetAPIClient {
           .eq("order_id", orderId)
 
         if (orderError) {
-          console.error("[v0] Failed to update order status:", orderError)
+          console.error("Failed to update order status:", orderError)
         }
       }
 
       return response
     } catch (error) {
-      console.error("[v0] Hubnet purchase error:", error)
+      console.error("Hubnet purchase error:", error)
 
       const { error: transactionError } = await supabase.from("transactions").insert({
         order_id: orderId,
@@ -211,7 +211,7 @@ class HubnetAPIClient {
       })
 
       if (transactionError) {
-        console.error("[v0] Failed to save failed transaction:", transactionError)
+        console.error("Failed to save failed transaction:", transactionError)
       }
 
       return {

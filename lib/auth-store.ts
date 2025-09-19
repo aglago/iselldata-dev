@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
-      console.log("[v0] Login attempt:", { email, password })
+      console.log("Login attempt:", { email, password })
 
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -48,11 +48,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         body: JSON.stringify({ email, password }),
       })
 
-      console.log("[v0] Login response status:", response.status)
+      console.log("Login response status:", response.status)
 
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] Login successful:", data)
+        console.log("Login successful:", data)
 
         localStorage.setItem("auth-token", data.token)
         localStorage.setItem("auth-user", JSON.stringify(data.user))
@@ -65,19 +65,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
 
-        console.log("[v0] Auth state updated successfully")
+        console.log("Auth state updated successfully")
         return true
       }
 
       return false
     } catch (error) {
-      console.error("[v0] Login error:", error)
+      console.error("Login error:", error)
       return false
     }
   },
 
   logout: () => {
-    console.log("[v0] Logout")
+    console.log("Logout")
     localStorage.removeItem("auth-token")
     localStorage.removeItem("auth-user")
     removeCookie("auth-token")
@@ -94,12 +94,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const token = localStorage.getItem("auth-token")
     const userStr = localStorage.getItem("auth-user")
 
-    console.log("[v0] Checking auth - token exists:", !!token)
+    console.log("Checking auth - token exists:", !!token)
 
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr)
-        console.log("[v0] Restoring auth from localStorage:", { user, hasToken: !!token })
+        console.log("Restoring auth from localStorage:", { user, hasToken: !!token })
 
         setCookie("auth-token", token)
 
@@ -110,7 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
       } catch (error) {
-        console.error("[v0] Error parsing stored user:", error)
+        console.error("Error parsing stored user:", error)
         localStorage.removeItem("auth-token")
         localStorage.removeItem("auth-user")
         removeCookie("auth-token")
@@ -122,7 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         })
       }
     } else {
-      console.log("[v0] No stored auth found")
+      console.log("No stored auth found")
       set({
         user: null,
         token: null,
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: () => {
-    console.log("[v0] Initializing auth store")
+    console.log("Initializing auth store")
     get().checkAuth()
   },
 }))

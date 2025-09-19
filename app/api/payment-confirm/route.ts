@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const customerDetails = JSON.parse(formData.get("customerDetails") as string)
     const screenshot = formData.get("screenshot") as File
 
-    console.log("[v0] Payment confirmation received:", {
+    console.log("Payment confirmation received:", {
       orderId,
       paymentMethod,
       amount,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // 2. Send SMS to admin (0249905548)
     // 3. Store screenshot file
 
-    console.log("[v0] Order created for admin review:", orderData)
+    console.log("Order created for admin review:", orderData)
 
     const response = {
       success: true,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error("[v0] Payment confirmation error:", error)
+    console.error("Payment confirmation error:", error)
     return NextResponse.json(
       {
         success: false,
