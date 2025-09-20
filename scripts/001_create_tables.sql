@@ -46,7 +46,19 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
   email VARCHAR(100) NOT NULL UNIQUE,
   name VARCHAR(100) NOT NULL,
   role VARCHAR(20) DEFAULT 'admin',
+  password_hash TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create admin_sessions table for persistent authentication
+CREATE TABLE IF NOT EXISTS public.admin_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES public.admin_users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  user_data JSONB NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(admin_id)
 );
 
 -- Insert default admin user
@@ -59,6 +71,7 @@ ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for public access (since this is a business app, not user-specific)
 -- Customers can be accessed by anyone (for order processing)
@@ -73,6 +86,9 @@ CREATE POLICY "Allow public access to transactions" ON public.transactions FOR A
 -- Admin users can be accessed by anyone (for login verification)
 CREATE POLICY "Allow public access to admin_users" ON public.admin_users FOR ALL USING (true);
 
+-- Admin sessions can be accessed by anyone (for session management)
+CREATE POLICY "Allow public access to admin_sessions" ON public.admin_sessions FOR ALL USING (true);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customers(phone);
 CREATE INDEX IF NOT EXISTS idx_orders_order_id ON public.orders(order_id);
@@ -80,3 +96,5 @@ CREATE INDEX IF NOT EXISTS idx_orders_tracking_id ON public.orders(tracking_id);
 CREATE INDEX IF NOT EXISTS idx_orders_phone ON public.orders(phone);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_transactions_order_id ON public.transactions(order_id);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_admin_id ON public.admin_sessions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON public.admin_sessions(expires_at);

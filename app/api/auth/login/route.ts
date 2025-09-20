@@ -1,24 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
+import bcrypt from "bcrypt"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
-// Demo users - in production, use a proper database
-const DEMO_USERS = [
-  {
-    id: "1",
-    email: "admin@demo.com",
-    password: "password123", // In production, use hashed passwords
-    name: "Admin User",
-    role: "admin" as const,
-  },
-  {
-    id: "2",
-    email: "admin@atrady.com", // Added correct admin email for Atrady business
-    password: "atrady123",
-    name: "Atrady Admin",
-    role: "admin" as const,
-  },
-]
+// Using database authentication with hashed passwords
 
 function createToken(payload: any): string {
   const header = { alg: "HS256", typ: "JWT" }
@@ -40,10 +26,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 })
     }
 
-    // Find user (in production, query database with hashed password comparison)
-    const user = DEMO_USERS.find((u) => u.email === email && u.password === password)
+    // Get user from database
+    const supabase = await createClient()
+    const { data: user, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email)
+      .single()
 
-    if (!user) {
+    if (error || !user) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    }
+
+    // Check if password_hash exists
+    if (!user.password_hash) {
+      return NextResponse.json({ error: "User not properly configured" }, { status: 401 })
+    }
+
+    // Verify password
+    const passwordMatch = await bcrypt.compare(password, user.password_hash)
+    if (!passwordMatch) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
@@ -53,8 +55,8 @@ export async function POST(request: NextRequest) {
       role: user.role,
     })
 
-    // Return user data (excluding password) and token
-    const { password: _, ...userWithoutPassword } = user
+    // Return user data (excluding password_hash) and token
+    const { password_hash: _, ...userWithoutPassword } = user
 
     return NextResponse.json({
       success: true,
