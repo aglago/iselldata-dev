@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     console.log("Supabase client created successfully")
 
-    const orderId = `GD${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`
-    const trackingId = `TRK${Math.random().toString(36).substr(2, 8).toUpperCase()}`
+    const orderId = `GD${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    const trackingId = `TRK${Math.random().toString(36).substring(2, 10).toUpperCase()}`
 
     let customerId: string
     const { data: existingCustomer } = await supabase
