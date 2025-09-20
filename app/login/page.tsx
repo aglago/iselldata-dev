@@ -28,17 +28,11 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
-    console.log("Login form submitted with:", { email, password })
-
     const success = await login(email, password)
 
-    console.log("Login function returned:", success)
-
     if (success) {
-      console.log("Login successful, redirecting to admin")
       router.push("/admin")
     } else {
-      console.log("Login failed, showing error")
       setError("Invalid email or password. Please try again.")
     }
 
@@ -109,10 +103,6 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <div className="text-sm text-muted-foreground">Demo credentials: admin@demo.com / password123</div>
-            </div>
           </CardContent>
         </Card>
 
