@@ -1,143 +1,240 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent } from "@/components/ui/card"
-import { Smartphone, Clock } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { PaymentInstructions } from "@/components/payment-instructions"
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Smartphone, Clock, ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface OrderModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
   package: {
-    id: number
-    size: string
-    price: number
-    duration: string
-    network: string
-  } | null
+    id: number;
+    size: string;
+    price: number;
+    duration: string;
+    network: string;
+  } | null;
 }
 
 const isBusinessHours = () => {
-  const now = new Date()
-  const day = now.getDay() // 0 = Sunday, 1 = Monday, etc.
-  const hour = now.getHours()
+  const now = new Date();
+  const day = now.getDay();
+  const hour = now.getHours();
 
-  // Sunday is closed (day 0)
   if (day === 0) {
-    return { isOpen: false, message: "We are closed on Sundays. Orders will be processed on Monday." }
+    return {
+      isOpen: false,
+      message: "We are closed on Sundays. Orders will be processed on Monday.",
+    };
   }
 
-  // Monday to Saturday: 7 AM to 9 PM
   if (hour < 7 || hour >= 21) {
     return {
       isOpen: false,
-      message: "Orders outside business hours (7 AM - 9 PM) will be processed the next business day.",
-    }
+      message:
+        "Orders outside business hours (7 AM - 9 PM) will be processed the next business day.",
+    };
   }
 
-  return { isOpen: true, message: "" }
-}
+  return { isOpen: true, message: "" };
+};
 
 const getDeliveryInfo = (network: string) => {
   switch (network) {
     case "airteltigo":
-      return { time: "Instant delivery", color: "text-green-600" }
+      return { time: "Instant delivery", color: "text-green-600" };
     case "mtn":
     case "telecel":
-      return { time: "15-30 minutes (up to 1 hour)", color: "text-amber-600" }
+      return { time: "15-30 minutes (up to 1 hour)", color: "text-amber-600" };
     default:
-      return { time: "15-30 minutes", color: "text-blue-600" }
+      return { time: "15-30 minutes", color: "text-blue-600" };
   }
-}
+};
 
-export function OrderModal({ isOpen, onClose, package: selectedPackage }: OrderModalProps) {
-  const [step, setStep] = useState(1)
+const getNetworkCode = (network: string) => {
+  switch (network.toLowerCase()) {
+    case "mtn":
+      return "MTN";
+    case "telecel":
+    case "vodafone":
+      return "VOD";
+    case "airteltigo":
+      return "ATM";
+    default:
+      return "MTN";
+  }
+};
+
+export function OrderModal({
+  isOpen,
+  onClose,
+  package: selectedPackage,
+}: OrderModalProps) {
+  const [step, setStep] = useState(1);
   const [orderData, setOrderData] = useState({
     phoneNumber: "",
     customerName: "",
-  })
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [orderComplete, setOrderComplete] = useState(false)
-  const [orderId, setOrderId] = useState("")
-  const [paymentDetails, setPaymentDetails] = useState<any>(null)
+  });
+  const [paymentData, setPaymentData] = useState({
+    paymentNetwork: "",
+    paymentPhoneNumber: "",
+    accountName: "",
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isValidatingAccount, setIsValidatingAccount] = useState(false);
 
-  const businessStatus = isBusinessHours()
-  const deliveryInfo = selectedPackage ? getDeliveryInfo(selectedPackage.network) : null
+  const businessStatus = isBusinessHours();
+  const deliveryInfo = selectedPackage
+    ? getDeliveryInfo(selectedPackage.network)
+    : null;
 
   const handleInputChange = (field: string, value: string) => {
-    setOrderData((prev) => ({ ...prev, [field]: value }))
-  }
+    setOrderData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePaymentInputChange = (field: string, value: string) => {
+    setPaymentData((prev) => ({ ...prev, [field]: value }));
+    
+    // Clear account name when network or phone number changes
+    if (field === "paymentNetwork" || field === "paymentPhoneNumber") {
+      setPaymentData((prev) => ({ ...prev, accountName: "" }));
+    }
+  };
 
   const validatePhoneNumber = (phone: string) => {
-    // Ghana phone number validation (10 digits starting with 0 or +233)
-    const ghanaPhoneRegex = /^(\+233|0)[2-9]\d{8}$/
-    return ghanaPhoneRegex.test(phone.replace(/\s/g, ""))
-  }
+    const ghanaPhoneRegex = /^(\+233|0)[2-9]\d{8}$/;
+    return ghanaPhoneRegex.test(phone.replace(/\s/g, ""));
+  };
 
-  const handlePlaceOrder = async () => {
-    if (!orderData.phoneNumber || !validatePhoneNumber(orderData.phoneNumber)) {
-      alert("Please enter a valid Ghana phone number")
-      return
+  const validateAccount = async () => {
+    if (!paymentData.paymentNetwork || !paymentData.paymentPhoneNumber) {
+      toast.error("Please select network and enter phone number");
+      return;
     }
 
-    setIsProcessing(true)
+    if (!validatePhoneNumber(paymentData.paymentPhoneNumber)) {
+      toast.error("Please enter a valid Ghana phone number");
+      return;
+    }
+
+    setIsValidatingAccount(true);
 
     try {
-      const timestamp = Date.now().toString().slice(-8) // Last 8 digits of timestamp
-      const randomId = Math.random().toString(36).substr(2, 6).toUpperCase() // 6 random chars
-      const newOrderId = `GD${timestamp}${randomId}` // Format: GD12345678ABC123 (max 17 chars)
+      const response = await fetch('/api/payment/validate-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currency: 'GHS',
+          accountCode: getNetworkCode(paymentData.paymentNetwork),
+          accountNumber: paymentData.paymentPhoneNumber,
+        }),
+      });
 
-      const paymentInfo = {
-        orderId: newOrderId,
-        amount: selectedPackage.price,
-        momoNumber: "024 990 5548",
-        vodafoneNumber: "050 958 1027",
-        airteltigoNumber: "027 012 3456",
-        recipientName: "Samuella Manye Aglago",
+      const result = await response.json();
+
+      if (result.success && result.accountName) {
+        setPaymentData((prev) => ({ ...prev, accountName: result.accountName }));
+      } else {
+        toast.error("Could not validate account. Please check the phone number and network.");
       }
-
-      // Store order locally for tracking
-      const orderInfo = {
-        orderId: newOrderId,
-        package: selectedPackage,
-        customer: orderData,
-        timestamp: new Date().toISOString(),
-        status: "pending_payment",
-      }
-
-      // Save to localStorage for now (instead of database)
-      const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]")
-      existingOrders.push(orderInfo)
-      localStorage.setItem("orders", JSON.stringify(existingOrders))
-
-      setOrderId(newOrderId)
-      setPaymentDetails(paymentInfo)
-      setOrderComplete(true)
-      setStep(2)
     } catch (error) {
-      console.error("Order creation error:", error)
-      alert("Failed to generate payment instructions. Please try again.")
+      console.error("Account validation error:", error);
+      toast.error("Failed to validate account. Please try again.");
     } finally {
-      setIsProcessing(false)
+      setIsValidatingAccount(false);
     }
-  }
+  };
+
+  const handleContinueToPayment = () => {
+    if (!orderData.phoneNumber || !validatePhoneNumber(orderData.phoneNumber)) {
+      toast.error("Please enter a valid Ghana phone number");
+      return;
+    }
+    setStep(2);
+  };
+
+  const handleProcessPayment = async () => {
+    if (!paymentData.paymentNetwork || !paymentData.paymentPhoneNumber || !paymentData.accountName) {
+      toast.error("Please validate your payment account first");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const timestamp = Date.now().toString().slice(-8);
+      const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newOrderId = `GD${timestamp}${randomId}`;
+
+      const paymentResponse = await fetch('/api/payment/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: selectedPackage?.price,
+          reason: `${selectedPackage?.size} ${selectedPackage?.network.toUpperCase()} data package`,
+          currency: 'GHS',
+          network: getNetworkCode(paymentData.paymentNetwork),
+          accountName: paymentData.accountName,
+          accountNumber: paymentData.paymentPhoneNumber,
+          reference: newOrderId,
+          packageDetails: selectedPackage,
+          customerDetails: orderData,
+        }),
+      });
+
+      if (!paymentResponse.ok) {
+        throw new Error('Payment processing failed');
+      }
+
+      const paymentResult = await paymentResponse.json();
+      
+      if (paymentResult.success) {
+        toast.success('Payment initiated successfully! Please check your phone for the payment prompt.');
+        resetModal();
+      } else {
+        throw new Error(paymentResult.message || 'Payment failed');
+      }
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      toast.error("Failed to process payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const resetModal = () => {
-    setStep(1)
-    setOrderData({ phoneNumber: "", customerName: "" })
-    setOrderComplete(false)
-    setOrderId("")
-    setPaymentDetails(null)
-    setIsProcessing(false)
-    onClose()
-  }
+    setStep(1);
+    setOrderData({ phoneNumber: "", customerName: "" });
+    setPaymentData({ paymentNetwork: "", paymentPhoneNumber: "", accountName: "" });
+    setIsProcessing(false);
+    setIsValidatingAccount(false);
+    onClose();
+  };
 
-  if (!selectedPackage) return null
+  if (!selectedPackage) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={resetModal}>
@@ -145,17 +242,30 @@ export function OrderModal({ isOpen, onClose, package: selectedPackage }: OrderM
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
-            Complete Your Order
+            {step === 1 ? "Complete Your Order" : "Payment Details"}
+            {step === 2 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStep(1)}
+                className="ml-auto"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
           </DialogTitle>
           <DialogDescription>
             {selectedPackage.size} {selectedPackage.network.toUpperCase()} data package
+            {step === 2 && " - Step 2 of 2"}
           </DialogDescription>
         </DialogHeader>
 
         {!businessStatus.isOpen && (
           <Alert className="mb-4">
             <Clock className="h-4 w-4" />
-            <AlertDescription className="text-sm">{businessStatus.message}</AlertDescription>
+            <AlertDescription className="text-sm">
+              {businessStatus.message}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -165,29 +275,34 @@ export function OrderModal({ isOpen, onClose, package: selectedPackage }: OrderM
               <span className="text-lg font-medium">
                 {selectedPackage.size} {selectedPackage.network.toUpperCase()}
               </span>
-              <span className="text-xl font-bold text-primary">GH₵{selectedPackage.price}</span>
+              <span className="text-xl font-bold text-primary">
+                GH₵{selectedPackage.price}
+              </span>
             </div>
             {deliveryInfo && (
               <p className="text-sm text-muted-foreground">
-                Expected delivery: <span className={deliveryInfo.color}>{deliveryInfo.time}</span>
+                Expected delivery:{" "}
+                <span className={deliveryInfo.color}>{deliveryInfo.time}</span>
               </p>
             )}
             <p className="text-xs text-muted-foreground">validity: 90 days</p>
           </CardContent>
         </Card>
 
-        {/* Step 1: Customer Information */}
+        {/* Step 1: Delivery Information */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number *</Label>
+              <Label htmlFor="phoneNumber">Phone Number (Delivery) *</Label>
               <Input
                 id="phoneNumber"
                 placeholder="0XX XXX XXXX"
                 value={orderData.phoneNumber}
                 onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Enter the phone number to receive the data bundle</p>
+              <p className="text-xs text-muted-foreground">
+                Enter the phone number to receive the data bundle
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -196,29 +311,80 @@ export function OrderModal({ isOpen, onClose, package: selectedPackage }: OrderM
                 id="customerName"
                 placeholder="Enter your full name"
                 value={orderData.customerName}
-                onChange={(e) => handleInputChange("customerName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("customerName", e.target.value)
+                }
               />
             </div>
 
-            <Button onClick={handlePlaceOrder} disabled={isProcessing} className="w-full">
-              {isProcessing ? "Processing..." : "Continue to Payment"}
+            <Button
+              onClick={handleContinueToPayment}
+              className="w-full"
+            >
+              Continue to Payment
             </Button>
           </div>
         )}
 
-        {/* Step 2: Payment Instructions */}
-        {step === 2 && orderComplete && paymentDetails && (
-          <PaymentInstructions
-            orderId={orderId}
-            paymentMethod="mobile_money" // Default to mobile money
-            amount={selectedPackage.price}
-            paymentDetails={paymentDetails}
-            packageDetails={selectedPackage}
-            customerDetails={orderData}
-            onClose={resetModal}
-          />
+        {/* Step 2: Payment Information */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="paymentNetwork">Payment Network *</Label>
+              <Select
+                value={paymentData.paymentNetwork}
+                onValueChange={(value) => handlePaymentInputChange("paymentNetwork", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment network" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mtn">MTN Mobile Money</SelectItem>
+                  <SelectItem value="telecel">Telecel Cash</SelectItem>
+                  <SelectItem value="airteltigo">AirtelTigo Money</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paymentPhoneNumber">Payment Phone Number *</Label>
+              <Input
+                id="paymentPhoneNumber"
+                placeholder="0XX XXX XXXX"
+                value={paymentData.paymentPhoneNumber}
+                onChange={(e) => handlePaymentInputChange("paymentPhoneNumber", e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Phone number to debit payment from
+              </p>
+            </div>
+
+            <Button
+              onClick={validateAccount}
+              disabled={isValidatingAccount || !paymentData.paymentNetwork || !paymentData.paymentPhoneNumber}
+              variant="outline"
+              className="w-full"
+            >
+              {isValidatingAccount ? "Validating..." : "Validate Account"}
+            </Button>
+
+            {paymentData.accountName && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm font-medium text-green-800">Account Validated</p>
+                <p className="text-sm text-green-600">{paymentData.accountName}</p>
+              </div>
+            )}
+
+            <Button
+              onClick={handleProcessPayment}
+              disabled={isProcessing || !paymentData.accountName}
+              className="w-full"
+            >
+              {isProcessing ? "Processing Payment..." : `Pay GH₵${selectedPackage.price}`}
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

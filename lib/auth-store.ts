@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { createClient } from "@/lib/supabase/client"
 
 interface User {
   id: string
@@ -13,24 +14,12 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
-  checkAuth: () => void
+  logout: () => Promise<void>
+  checkAuth: () => Promise<void>
   initialize: () => void
 }
 
-const setCookie = (name: string, value: string, days = 7) => {
-  if (typeof document !== "undefined") {
-    const expires = new Date()
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`
-  }
-}
-
-const removeCookie = (name: string) => {
-  if (typeof document !== "undefined") {
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`
-  }
-}
+const supabase = createClient()
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -40,23 +29,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
-      console.log("Login attempt:", { email, password })
-
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
 
-      console.log("Login response status:", response.status)
-
       if (response.ok) {
         const data = await response.json()
-        console.log("Login successful:", data)
 
-        localStorage.setItem("auth-token", data.token)
-        localStorage.setItem("auth-user", JSON.stringify(data.user))
-        setCookie("auth-token", data.token)
+        // Store session in Supabase for persistence (fallback gracefully if table doesn't exist)
+        try {
+          const { error: sessionError } = await supabase
+            .from('admin_sessions')
+            .upsert({
+              admin_id: data.user.id,
+              token: data.token,
+              user_data: data.user,
+              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            }, { onConflict: 'admin_id' })
+          
+          if (sessionError && sessionError.code !== 'PGRST205') {
+            console.error('Error storing session:', sessionError)
+          }
+        } catch (error) {
+          console.error('Error storing session:', error)
+        }
 
         set({
           user: data.user,
@@ -65,22 +63,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
 
-        console.log("Auth state updated successfully")
         return true
+      } else {
+        return false
       }
-
-      return false
     } catch (error) {
       console.error("Login error:", error)
       return false
     }
   },
 
-  logout: () => {
+  logout: async () => {
     console.log("Logout")
-    localStorage.removeItem("auth-token")
-    localStorage.removeItem("auth-user")
-    removeCookie("auth-token")
+    
+    // Remove session from database
+    const currentUser = get().user
+    if (currentUser) {
+      try {
+        await supabase
+          .from('admin_sessions')
+          .delete()
+          .eq('admin_id', currentUser.id)
+      } catch (error) {
+        console.error('Error removing session:', error)
+      }
+    }
 
     set({
       user: null,
@@ -90,30 +97,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     })
   },
 
-  checkAuth: () => {
-    const token = localStorage.getItem("auth-token")
-    const userStr = localStorage.getItem("auth-user")
-
-    console.log("Checking auth - token exists:", !!token)
-
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        console.log("Restoring auth from localStorage:", { user, hasToken: !!token })
-
-        setCookie("auth-token", token)
-
+  checkAuth: async () => {
+    try {
+      set({ isLoading: true })
+      
+      // If we're already authenticated, don't reset the state due to missing table
+      const currentState = get()
+      
+      // Check for valid session in database
+      const { data: sessions, error } = await supabase
+        .from('admin_sessions')
+        .select('*')
+        .gt('expires_at', new Date().toISOString())
+        .order('expires_at', { ascending: false })
+        .limit(1)
+      
+      if (error) {
+        if (error.code === 'PGRST205') {
+          // Table doesn't exist - keep current state if authenticated
+          if (currentState.isAuthenticated) {
+            set({ isLoading: false })
+            return
+          }
+        } else {
+          console.error("Database error checking auth:", error)
+        }
         set({
-          user,
-          token,
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
+        return
+      }
+
+      if (sessions && sessions.length > 0) {
+        const session = sessions[0]
+        set({
+          user: session.user_data,
+          token: session.token,
           isAuthenticated: true,
           isLoading: false,
         })
-      } catch (error) {
-        console.error("Error parsing stored user:", error)
-        localStorage.removeItem("auth-token")
-        localStorage.removeItem("auth-user")
-        removeCookie("auth-token")
+      } else {
         set({
           user: null,
           token: null,
@@ -121,8 +147,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         })
       }
-    } else {
-      console.log("No stored auth found")
+    } catch (error) {
+      console.error("Error checking auth:", error)
       set({
         user: null,
         token: null,
@@ -133,8 +159,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   initialize: () => {
-    console.log("Initializing auth store")
-    get().checkAuth()
+    if (typeof window !== 'undefined') {
+      get().checkAuth()
+    }
   },
 }))
 
