@@ -262,9 +262,43 @@ export function OrderModal({
     }
   };
   
-  const handlePaymentConfirmed = () => {
-    toast.success('Payment confirmed! Your data will be delivered shortly.');
-    resetModal();
+  const handlePaymentConfirmed = async () => {
+    if (!orderId) {
+      toast.error('Order ID not found');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      // Send SMS confirmation
+      const response = await fetch('/api/payment/send-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+          phone: orderData.phoneNumber,
+          packageSize: selectedPackage?.size || '',
+          network: selectedPackage?.network || ''
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success('Payment confirmed! Your data will be delivered shortly.');
+      } else {
+        toast.success('Payment confirmed! SMS notification failed but your data will be delivered shortly.');
+      }
+    } catch (error) {
+      console.error('SMS sending failed:', error);
+      toast.success('Payment confirmed! SMS notification failed but your data will be delivered shortly.');
+    } finally {
+      setIsProcessing(false);
+      resetModal();
+    }
   };
   
   const handleCheckPayment = () => {
@@ -442,12 +476,14 @@ export function OrderModal({
         {step === 3 && (
           <div className="space-y-4">
             <div className="text-center space-y-3">
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <p className="font-medium text-slate-800">Awaiting Payment</p>
-                <p className="text-sm text-slate-600 mt-1">
-                  Check your phone for the payment prompt from {paymentData.paymentNetwork.toUpperCase()} and complete the payment
-                </p>
-              </div>
+              {paymentStatus === 'pending' && (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                  <p className="font-medium text-slate-800">Awaiting Payment</p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Check your phone for the payment prompt from {paymentData.paymentNetwork.toUpperCase()} and complete the payment
+                  </p>
+                </div>
+              )}
               
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
@@ -494,8 +530,9 @@ export function OrderModal({
                 <Button
                   onClick={handlePaymentConfirmed}
                   className="w-full"
+                  disabled={isProcessing}
                 >
-                  Complete Order
+                  {isProcessing ? "Sending confirmation..." : "Complete Order"}
                 </Button>
               </div>
             )}
