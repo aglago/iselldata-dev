@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   delivery_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, delivered, failed
   hubnet_transaction_id VARCHAR(100),
   hubnet_payment_id VARCHAR(100),
+  ogateway_payment_id VARCHAR(100),
   reference VARCHAR(50) NOT NULL,
   tracking_id VARCHAR(20) NOT NULL UNIQUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
