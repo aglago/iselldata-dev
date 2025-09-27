@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         accountName: accountName,
         accountNumber: accountNumber,
         reference: reference,
-        callbackURL: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
+        callbackURL: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
       }),
     });
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       accountName,
       accountNumber,
       reference,
-      callbackURL: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
+      callbackURL: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
     });
 
     console.log('API URL:', 'https://api.ogateway.io/collections/mobilemoney');
