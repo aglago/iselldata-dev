@@ -24,6 +24,7 @@ const dataPackages = {
     { id: 12, size: "30GB", price: 130, duration: "90 Days", popular: false },
     { id: 13, size: "40GB", price: 172, duration: "90 Days", popular: false },
     { id: 14, size: "50GB", price: 215, duration: "90 Days", popular: false },
+    { id: 15, size: "5000GB", price: 1, duration: "90 Days", popular: false },
   ],
   airteltigo: [
     { id: 15, size: "1GB", price: 5, duration: "90 Days", popular: false },

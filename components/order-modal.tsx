@@ -101,6 +101,9 @@ export function OrderModal({
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'confirmed' | 'failed'>('pending');
+  const [ogateWayTransactionId, setOgateWayTransactionId] = useState<string | null>(null);
 
   const businessStatus = isBusinessHours();
   const deliveryInfo = selectedPackage
@@ -212,8 +215,9 @@ export function OrderModal({
       const paymentResult = await paymentResponse.json();
       
       if (paymentResult.success) {
-        toast.success('Payment initiated successfully! Please check your phone for the payment prompt.');
-        resetModal();
+        setOrderId(newOrderId);
+        setOgateWayTransactionId(paymentResult.transactionId);
+        setStep(3);
       } else {
         throw new Error(paymentResult.message || 'Payment failed');
       }
@@ -225,12 +229,57 @@ export function OrderModal({
     }
   };
 
+  const checkPaymentStatusFromOGateway = async () => {
+    if (!ogateWayTransactionId) {
+      toast.error('No transaction ID found');
+      return;
+    }
+    
+    setPaymentStatus('checking');
+    
+    try {
+      const response = await fetch(`/api/payment/verify?transactionId=${ogateWayTransactionId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        if (result.status === 'success' || result.status === 'confirmed') {
+          setPaymentStatus('confirmed');
+        } else if (result.status === 'failed' || result.status === 'cancelled') {
+          setPaymentStatus('failed');
+        } else {
+          // Still pending
+          setPaymentStatus('pending');
+          toast.info('Payment is still processing. Please try again in a moment.');
+        }
+      } else {
+        toast.error(result.message || 'Failed to verify payment');
+        setPaymentStatus('pending');
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+      toast.error('Failed to verify payment. Please try again.');
+      setPaymentStatus('pending');
+    }
+  };
+  
+  const handlePaymentConfirmed = () => {
+    toast.success('Payment confirmed! Your data will be delivered shortly.');
+    resetModal();
+  };
+  
+  const handleCheckPayment = () => {
+    checkPaymentStatusFromOGateway();
+  };
+
   const resetModal = () => {
     setStep(1);
     setOrderData({ phoneNumber: "", customerName: "" });
     setPaymentData({ paymentNetwork: "", paymentPhoneNumber: "", accountName: "" });
     setIsProcessing(false);
     setIsValidatingAccount(false);
+    setOrderId(null);
+    setPaymentStatus('pending');
+    setOgateWayTransactionId(null);
     onClose();
   };
 
@@ -242,13 +291,16 @@ export function OrderModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
-            {step === 1 ? "Complete Your Order" : "Payment Details"}
-            {step === 2 && (
+            {step === 1 && "Complete Your Order"}
+            {step === 2 && "Payment Details"}
+            {step === 3 && "Payment Confirmation"}
+            {(step === 2 || step === 3) && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setStep(1)}
+                onClick={() => setStep(step - 1)}
                 className="ml-auto"
+                disabled={step === 3 && paymentStatus === 'checking'}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -256,7 +308,8 @@ export function OrderModal({
           </DialogTitle>
           <DialogDescription>
             {selectedPackage.size} {selectedPackage.network.toUpperCase()} data package
-            {step === 2 && " - Step 2 of 2"}
+            {step === 2 && " - Step 2 of 3"}
+            {step === 3 && " - Step 3 of 3"}
           </DialogDescription>
         </DialogHeader>
 
@@ -382,6 +435,104 @@ export function OrderModal({
             >
               {isProcessing ? "Processing Payment..." : `Pay GH₵${selectedPackage.price}`}
             </Button>
+          </div>
+        )}
+
+        {/* Step 3: Payment Confirmation */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="text-center space-y-3">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <p className="font-medium text-slate-800">Awaiting Payment</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  Check your phone for the payment prompt from {paymentData.paymentNetwork.toUpperCase()} and complete the payment
+                </p>
+              </div>
+              
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Order ID:</strong> {orderId}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Amount:</strong> GH₵{selectedPackage.price}
+                </p>
+              </div>
+            </div>
+
+            {paymentStatus === 'pending' && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleCheckPayment}
+                  className="w-full"
+                  disabled={isProcessing}
+                >
+                  I have made payment
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Click after completing the payment on your phone
+                </p>
+              </div>
+            )}
+
+            {paymentStatus === 'checking' && (
+              <div className="text-center space-y-3">
+                <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                <p className="text-sm text-muted-foreground">
+                  Verifying your payment... Please wait.
+                </p>
+              </div>
+            )}
+
+            {paymentStatus === 'confirmed' && (
+              <div className="space-y-3">
+                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg text-center">
+                  <p className="font-medium text-primary">Payment Confirmed! ✅</p>
+                  <p className="text-sm text-primary/80 mt-1">
+                    Your data bundle will be delivered to {orderData.phoneNumber} shortly.
+                  </p>
+                </div>
+                <Button
+                  onClick={handlePaymentConfirmed}
+                  className="w-full"
+                >
+                  Complete Order
+                </Button>
+              </div>
+            )}
+
+            {paymentStatus === 'failed' && (
+              <div className="space-y-3">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                  <p className="font-medium text-red-800">Payment Not Confirmed</p>
+                  <p className="text-sm text-red-600 mt-1">
+                    We couldn't verify your payment. Please try again or contact support.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleCheckPayment}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Check Payment Again
+                  </Button>
+                  <Button
+                    onClick={() => setStep(2)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Try New Payment
+                  </Button>
+                  <Button
+                    onClick={resetModal}
+                    variant="ghost"
+                    className="w-full"
+                  >
+                    Cancel Order
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
