@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, RefreshCw, Eye, CheckCircle, XCircle, Clock, MoreHorizontal } from "lucide-react"
+import { Search, Download, RefreshCw, Eye, CheckCircle, XCircle, Clock, MoreHorizontal, Wallet } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 
 interface Order {
   id: string
@@ -23,11 +24,14 @@ interface Order {
     price: number
     duration: string
   }
-  status: "pending_payment" | "payment_confirmed" | "processing" | "completed" | "failed"
+  status: "pending_payment" | "payment_confirmed" | "processing" | "completed" | "failed" | "placed"
+  paymentStatus: string
   paymentMethod: string
   createdAt: string
-  completedAt?: string
+  updatedAt?: string
   transactionId?: string
+  trackingId?: string
+  reference?: string
   screenshot?: {
     name: string
     size: number
@@ -39,18 +43,74 @@ interface Order {
 export function OrdersManagement() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [networkFilter, setNetworkFilter] = useState("all")
+  const [hubnetBalance, setHubnetBalance] = useState<{balance: number, currency: string} | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+
+  const fetchHubnetBalance = async () => {
+    try {
+      setBalanceLoading(true)
+      const response = await fetch('/api/admin/hubnet-balance')
+      const data = await response.json()
+      
+      if (data.success) {
+        setHubnetBalance(data.data)
+      } else {
+        console.error('Failed to fetch Hubnet balance:', data.message)
+      }
+    } catch (error) {
+      console.error('Error fetching Hubnet balance:', error)
+    } finally {
+      setBalanceLoading(false)
+    }
+  }
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch("/api/admin/orders", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log("Fetched orders from API:", data.data)
+        setOrders(data.data)
+      } else {
+        throw new Error(data.message || "Failed to fetch orders")
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+      console.error("Error fetching orders:", errorMessage)
+      setError(errorMessage)
+      setOrders([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case "delivered":
+        return <CheckCircle className="h-4 w-4 text-primary" />
       case "processing":
-      case "payment_confirmed":
         return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
-      case "pending_payment":
+      case "placed":
+        return <Clock className="h-4 w-4 text-blue-500" />
+      case "pending":
+      case "payment_confirmed":
         return <Clock className="h-4 w-4 text-yellow-500" />
       case "failed":
         return <XCircle className="h-4 w-4 text-red-500" />
@@ -61,12 +121,14 @@ export function OrdersManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800"
+      case "delivered":
+        return "bg-primary/10 text-primary"
       case "processing":
-      case "payment_confirmed":
         return "bg-blue-100 text-blue-800"
-      case "pending_payment":
+      case "placed":
+        return "bg-blue-100 text-blue-800"
+      case "pending":
+      case "payment_confirmed":
         return "bg-yellow-100 text-yellow-800"
       case "failed":
         return "bg-red-100 text-red-800"
@@ -87,6 +149,8 @@ export function OrdersManagement() {
 
   const handlePlaceOrder = async (orderId: string) => {
     try {
+      toast.loading("Placing order...", { id: `order-${orderId}` })
+      
       console.log("Placing order to Hubnet:", orderId)
       const response = await fetch("/api/place-order", {
         method: "POST",
@@ -94,47 +158,71 @@ export function OrdersManagement() {
         body: JSON.stringify({ orderId }),
       })
 
+      const result = await response.json()
+      
       if (response.ok) {
-        // Update order status to processing
+        // Update order status locally based on response
+        const newStatus: Order['status'] = result.requiresManualProcessing ? "placed" : "processing"
         const updatedOrders = orders.map((order) =>
-          order.id === orderId ? { ...order, status: "processing" as const, needsProcessing: false } : order,
+          order.id === orderId ? { ...order, status: newStatus, needsProcessing: false } : order,
         )
         setOrders(updatedOrders)
-        localStorage.setItem("admin_orders", JSON.stringify(updatedOrders))
-        console.log("Order placed successfully")
+        
+        if (result.requiresManualProcessing) {
+          toast.success("Telecel order queued for manual processing", { id: `order-${orderId}` })
+        } else {
+          toast.success("Order placed successfully and is being processed", { id: `order-${orderId}` })
+        }
+        
+        // Refresh orders from API to get the latest data
+        setTimeout(() => {
+          fetchOrders()
+        }, 1000)
       } else {
-        console.error("Failed to place order")
+        // Handle different error types with appropriate messages
+        let errorMessage = result.message || "Failed to place order"
+        
+        if (result.balanceError) {
+          errorMessage = `Insufficient Hubnet balance (${result.message.split('(')[1]?.split(')')[0] || 'low balance'})`
+          toast.error(errorMessage, { 
+            id: `order-${orderId}`,
+            description: "Please top up your Hubnet account before placing orders"
+          })
+        } else {
+          toast.error(errorMessage, { id: `order-${orderId}` })
+        }
+        
+        // Update order status to failed for UI consistency  
+        const updatedOrders = orders.map((order) =>
+          order.id === orderId ? { ...order, status: "failed" as Order['status'], needsProcessing: true } : order,
+        )
+        setOrders(updatedOrders)
+        
+        // Refresh orders from API to get the latest data
+        setTimeout(() => {
+          fetchOrders()
+        }, 1000)
       }
     } catch (error) {
       console.error("Error placing order:", error)
+      toast.error("Network error while placing order", { id: `order-${orderId}` })
+      
+      // Keep order as retryable
+      const updatedOrders = orders.map((order) =>
+        order.id === orderId ? { ...order, needsProcessing: true } : order,
+      )
+      setOrders(updatedOrders)
     }
   }
 
   useEffect(() => {
-    const fetchOrders = () => {
-      try {
-        const storedOrders = localStorage.getItem("admin_orders")
-        if (storedOrders) {
-          const parsedOrders = JSON.parse(storedOrders)
-          console.log("Fetched orders from localStorage:", parsedOrders)
-          setOrders(parsedOrders)
-        } else {
-          console.log("No orders found in localStorage")
-          setOrders([])
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error)
-        setOrders([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchOrders()
+    fetchHubnetBalance()
 
+    // Refresh orders every 30 seconds
     const interval = setInterval(fetchOrders, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -152,8 +240,39 @@ export function OrdersManagement() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Orders Management</CardTitle>
-          <CardDescription>View and manage all customer orders</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Orders Management</CardTitle>
+              <CardDescription>View and manage all customer orders</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              {hubnetBalance ? (
+                <div className="text-right">
+                  <div className="font-medium">
+                    {hubnetBalance.currency} {hubnetBalance.balance.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {hubnetBalance.balance < 10 ? (
+                      <span className="text-red-600">Low balance ⚠️</span>
+                    ) : (
+                      <span className="text-green-600">Available</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchHubnetBalance}
+                  disabled={balanceLoading}
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${balanceLoading ? 'animate-spin' : ''}`} />
+                  {balanceLoading ? 'Loading...' : 'Load Balance'}
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filters */}
@@ -182,6 +301,7 @@ export function OrdersManagement() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending_payment">Pending Payment</SelectItem>
+                    <SelectItem value="payment_confirmed">Payment Confirmed</SelectItem>
                     <SelectItem value="processing">Processing</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
@@ -204,7 +324,16 @@ export function OrdersManagement() {
                 </Select>
               </div>
 
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchOrders}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Export
@@ -219,6 +348,15 @@ export function OrdersManagement() {
               <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
               <p>Loading orders...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+              <p className="text-red-600 mb-4">Error loading orders: {error}</p>
+              <Button onClick={fetchOrders} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </div>
           ) : (
             <div className="border rounded-lg">
               <div className="overflow-x-auto">
@@ -229,7 +367,8 @@ export function OrdersManagement() {
                       <th className="text-left p-4 font-medium">Customer</th>
                       <th className="text-left p-4 font-medium">Package</th>
                       <th className="text-left p-4 font-medium">Amount</th>
-                      <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-left p-4 font-medium">Payment Status</th>
+                      <th className="text-left p-4 font-medium">Order Status</th>
                       <th className="text-left p-4 font-medium">Date</th>
                       <th className="text-left p-4 font-medium">Actions</th>
                     </tr>
@@ -257,6 +396,14 @@ export function OrdersManagement() {
                         <td className="p-4">
                           <div className="font-medium">GH₵{order.package.price}</div>
                           <div className="text-sm text-muted-foreground">{order.paymentMethod.replace("_", " ")}</div>
+                        </td>
+                        <td className="p-4">
+                          <Badge className={getStatusColor(order.paymentStatus)}>
+                            <div className="flex items-center gap-1">
+                              {getStatusIcon(order.paymentStatus)}
+                              {order.paymentStatus.replace("_", " ")}
+                            </div>
+                          </Badge>
                         </td>
                         <td className="p-4">
                           <Badge className={getStatusColor(order.status)}>
@@ -287,39 +434,28 @@ export function OrdersManagement() {
                                 Screenshot
                               </Button>
                             )}
-                            {order.status === "payment_confirmed" && order.needsProcessing && (
+                            {/* Place Order Button with status-aware logic */}
+                            {order.paymentStatus === "confirmed" ? (
                               <Button
                                 size="sm"
                                 onClick={() => handlePlaceOrder(order.id)}
-                                className="bg-green-600 hover:bg-green-700"
+                                disabled={!order.needsProcessing && order.status !== "failed"}
+                                variant={order.status === "failed" ? "destructive" : "default"}
+                                className={(order.needsProcessing || order.status === "failed") ? "" : "opacity-50 cursor-not-allowed"}
                               >
-                                Place Order
+                                {order.status === "failed" ? "Try Again" : 
+                                 order.needsProcessing ? "Place Order" : "Already Processed"}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                className="opacity-50 cursor-not-allowed"
+                              >
+                                Awaiting Payment
                               </Button>
                             )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                {order.status === "failed" && (
-                                  <DropdownMenuItem onClick={() => handleRetryOrder(order.id)}>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Retry Order
-                                  </DropdownMenuItem>
-                                )}
-                                {order.status === "completed" && (
-                                  <DropdownMenuItem onClick={() => handleRefundOrder(order.id)}>
-                                    Refund Order
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
