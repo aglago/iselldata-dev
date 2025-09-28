@@ -90,7 +90,7 @@ export async function GET() {
         if (!customerSpending[customerKey]) {
           customerSpending[customerKey] = 0
         }
-        customer.orders.forEach((order: any) => {
+        customer.orders.forEach((order: { price: number | string }) => {
           customerSpending[customerKey] += Number(order.price)
         })
       })
