@@ -102,6 +102,7 @@ export function OrderModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [trackingId, setTrackingId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'confirmed' | 'failed'>('pending');
   const [ogateWayTransactionId, setOgateWayTransactionId] = useState<string | null>(null);
 
@@ -216,6 +217,7 @@ export function OrderModal({
       
       if (paymentResult.success) {
         setOrderId(newOrderId);
+        setTrackingId(paymentResult.trackingId);
         setOgateWayTransactionId(paymentResult.transactionId);
         setStep(3);
       } else {
@@ -383,7 +385,7 @@ export function OrderModal({
               <Label htmlFor="phoneNumber">Phone Number (Delivery) *</Label>
               <Input
                 id="phoneNumber"
-                placeholder="0XX XXX XXXX"
+                placeholder={selectedPackage.network.toUpperCase() == "MTN" ? "024 XXX XXXX" : "027 XX XXXXX"}
                 value={orderData.phoneNumber}
                 onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
               />
@@ -489,6 +491,11 @@ export function OrderModal({
                 <p className="text-sm text-muted-foreground">
                   <strong>Order ID:</strong> {orderId}
                 </p>
+                {trackingId && (
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Tracking ID:</strong> {trackingId}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   <strong>Amount:</strong> GH₵{selectedPackage.price}
                 </p>
