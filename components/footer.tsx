@@ -1,4 +1,5 @@
 import { Smartphone, Mail, Phone, MapPin } from "lucide-react"
+import Link from "next/link"
 
 export function Footer() {
   return (
@@ -12,10 +13,9 @@ export function Footer() {
               <span className="text-xl font-bold">iSellData</span>
             </div>
             <p className="text-background/80 mb-4 leading-relaxed">
-              Ghana's most trusted data provider. We deliver instant, affordable data bundles for MTN, AirtelTigo, and
-              Telecel networks across the country.
+              Buy your data bundles from iSellData, the trusted online data reseller. We offer affordable and reliable data packages from top networks in Ghana.
             </p>
-            <div className="text-sm text-background/60">Licensed and regulated data reseller in Ghana</div>
+            {/* <div className="text-sm text-background/60">Licensed and regulated data reseller in Ghana</div> */}
           </div>
 
           {/* Quick Links */}
@@ -27,7 +27,7 @@ export function Footer() {
                   Data Packages
                 </a>
               </li>
-              <li>
+              {/* <li>
                 <a href="#features" className="hover:text-background transition-colors">
                   Features
                 </a>
@@ -46,7 +46,7 @@ export function Footer() {
                 <a href="#" className="hover:text-background transition-colors">
                   Privacy Policy
                 </a>
-              </li>
+              </li> */}
             </ul>
           </div>
 
@@ -56,16 +56,16 @@ export function Footer() {
             <div className="space-y-3 text-background/80">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>+233 XX XXX XXXX</span>
+                <Link href="https://wa.me/233509581027">Click here to chat admin</Link>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4" />
-                <span>info@iSellData.com</span>
+                <span>iselldatahub@gmail.com</span>
               </div>
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4" />
                 <span>Accra, Ghana</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

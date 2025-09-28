@@ -30,9 +30,9 @@ export function Header() {
             <a href="#packages" className="hover:text-primary-foreground/80 transition-colors">
               Data Packages
             </a>
-            <a href="#features" className="hover:text-primary-foreground/80 transition-colors">
-              Features
-            </a>
+            <Link href="/track-order" className="hover:text-primary-foreground/80 transition-colors">
+              Track Order
+            </Link>
             <a href="#contact" className="hover:text-primary-foreground/80 transition-colors">
               Contact
             </a>
@@ -73,9 +73,9 @@ export function Header() {
               <a href="#packages" className="hover:text-primary-foreground/80 transition-colors">
                 Data Packages
               </a>
-              <a href="#features" className="hover:text-primary-foreground/80 transition-colors">
-                Features
-              </a>
+              <Link href="/track-order" className="hover:text-primary-foreground/80 transition-colors">
+                Track Order
+              </Link>
               <a href="#contact" className="hover:text-primary-foreground/80 transition-colors">
                 Contact
               </a>
