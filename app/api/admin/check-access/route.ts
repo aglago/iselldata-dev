@@ -22,11 +22,12 @@ function getClientIP(request: NextRequest): string {
 function isIPWhitelisted(clientIP: string): boolean {
   const allowedIPs = process.env.ADMIN_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
   
-  // Match middleware logic exactly - no development bypass for now
-  // (commented out to test unauthorized user experience)
-  const localhostIPs = ['127.0.0.1', '::1', 'localhost']
-  if (process.env.NODE_ENV === 'development' && localhostIPs.includes(clientIP)) {
-    return true
+  // Only allow localhost in development if explicitly enabled
+  if (process.env.NODE_ENV === 'development' && process.env.ALLOW_LOCALHOST_ADMIN === 'true') {
+    const localhostIPs = ['127.0.0.1', '::1', 'localhost']
+    if (localhostIPs.includes(clientIP)) {
+      return true
+    }
   }
   
   return allowedIPs.includes(clientIP)

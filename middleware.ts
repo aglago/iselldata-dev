@@ -24,9 +24,12 @@ function getClientIP(request: NextRequest): string {
 function isIPWhitelisted(clientIP: string): boolean {
   const allowedIPs = process.env.ADMIN_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
   
-  // Always allow localhost for development
-  if (process.env.NODE_ENV === 'development') {
-    return true // Allow all IPs in development for now
+  // Only allow localhost in development if explicitly enabled
+  if (process.env.NODE_ENV === 'development' && process.env.ALLOW_LOCALHOST_ADMIN === 'true') {
+    const localhostIPs = ['127.0.0.1', '::1', 'localhost']
+    if (localhostIPs.includes(clientIP)) {
+      return true
+    }
   }
   
   return allowedIPs.includes(clientIP)
