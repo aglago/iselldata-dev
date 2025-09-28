@@ -29,7 +29,7 @@ export class ArkeselSMS {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sender: "GhanaData", // Your sender ID
+          sender: process.env.SMS_SENDER_ID || "iSellData", // Your sender ID
           message: message,
           recipients: [to],
         }),
@@ -62,7 +62,7 @@ export class ArkeselSMS {
   }
 
   async sendDeliveryConfirmation(phone: string, trackingId: string, packageSize: string, network: string) {
-    const message = `Great news! Your ${packageSize} ${network.toUpperCase()} data bundle has been delivered successfully. Tracking ID: ${trackingId}. Thank you for choosing GhanaData Pro! 🎉`
+    const message = `Great news! Your ${packageSize} ${network.toUpperCase()} data bundle has been initiated successfully. Tracking ID: ${trackingId}. Thank you for choosing iSellData! 🎉`
     return this.sendSMS({ to: phone, message })
   }
 

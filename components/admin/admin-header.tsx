@@ -28,7 +28,7 @@ export function AdminHeader() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <Smartphone className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">GhanaData Pro</span>
+            <span className="text-xl font-bold">iSellData</span>
             <Badge variant="secondary" className="ml-2">
               Admin
             </Badge>

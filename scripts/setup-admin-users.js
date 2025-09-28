@@ -22,7 +22,7 @@ async function setupAdminUsers() {
 
   const adminUsers = [
     {
-      email: "atrady.ltd@gmail.com",
+      email: "iSellData.ltd@gmail.com",
       name: "Samuella", 
       role: "admin",
       password: "@tradysh!ps<3"

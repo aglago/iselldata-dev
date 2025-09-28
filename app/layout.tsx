@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "GhanaData Pro - Trusted Data Provider",
+  title: "iSellData - Trusted Data Provider",
   description: "Ghana's most trusted data provider for MTN, AirtelTigo, and Telecel networks",
   generator: "v0.app",
 }

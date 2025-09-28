@@ -117,7 +117,7 @@ function mapHubnetToDisplay(hubnetNetwork: string): string {
 
 async function sendFailureNotification(phoneNumber: string, orderId: string, reason: string) {
   try {
-    const message = `Sorry, we couldn't deliver your data bundle. Order: ${orderId}. Reason: ${reason}. Your payment will be refunded within 24 hours. Contact support: 050 958 1027 - GhanaData Pro`
+    const message = `Sorry, we couldn't deliver your data bundle. Order: ${orderId}. Reason: ${reason}. Your payment will be refunded within 24 hours. Contact support: 050 958 1027 - iSellData`
 
     console.log(`Failure SMS to ${phoneNumber}: ${message}`)
 

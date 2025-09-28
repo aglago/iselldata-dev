@@ -257,7 +257,7 @@ function generatePaymentDetails(paymentMethod: string, amount: number) {
       return {
         bankName: "GCB Bank Limited",
         accountNumber: "1234567890123456",
-        accountName: "GhanaData Pro Limited",
+        accountName: "iSellData Limited",
         branch: "Accra Main Branch",
       }
     case "card":

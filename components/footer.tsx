@@ -9,7 +9,7 @@ export function Footer() {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               <Smartphone className="h-8 w-8" />
-              <span className="text-xl font-bold">GhanaData Pro</span>
+              <span className="text-xl font-bold">iSellData</span>
             </div>
             <p className="text-background/80 mb-4 leading-relaxed">
               Ghana's most trusted data provider. We deliver instant, affordable data bundles for MTN, AirtelTigo, and
@@ -71,7 +71,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/60">
-          <p>&copy; 2024 GhanaData Pro. All rights reserved.</p>
+          <p>&copy; 2024 iSellData. All rights reserved.</p>
         </div>
       </div>
     </footer>

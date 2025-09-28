@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Menu, X, Wifi, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/auth-store"
+import { AdminAccessCheck, AdminAccessIcon } from "@/components/admin-access-check"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -21,7 +22,7 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-2">
             <Wifi className="h-8 w-8" />
-            <span className="text-xl font-bold">ATRADY</span>
+            <span className="text-xl font-bold">iSellData</span>
           </div>
 
           {/* Desktop Navigation */}
@@ -48,11 +49,7 @@ export function Header() {
                 </Button>
               </div>
             ) : (
-              <Link href="/login">
-                <Button variant="secondary" size="sm">
-                  Admin Login
-                </Button>
-              </Link>
+              <AdminAccessCheck variant="secondary" />
             )}
           </nav>
 
@@ -95,11 +92,7 @@ export function Header() {
                   </Button>
                 </div>
               ) : (
-                <Link href="/login">
-                  <Button variant="secondary" size="sm" className="w-fit">
-                    Admin Login
-                  </Button>
-                </Link>
+                <AdminAccessCheck variant="secondary" className="w-fit" />
               )}
             </nav>
           </div>

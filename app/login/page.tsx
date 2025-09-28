@@ -46,7 +46,7 @@ export default function LoginPage() {
         <div className="text-center">
           <Link href="/" className="inline-flex items-center space-x-2 mb-6">
             <Smartphone className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">GhanaData Pro</span>
+            <span className="text-2xl font-bold">iSellData</span>
           </Link>
         </div>
 
