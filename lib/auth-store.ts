@@ -62,7 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isLoading: false,
         })
-
+        
         return true
       } else {
         return false

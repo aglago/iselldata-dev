@@ -31,7 +31,7 @@ export default function LoginPage() {
     const success = await login(email, password)
 
     if (success) {
-      router.push("/admin")
+      router.replace("/admin")
     } else {
       setError("Invalid email or password. Please try again.")
     }
@@ -69,7 +69,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@ghanadatapro.com"
+                  placeholder="admin@iSellData.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

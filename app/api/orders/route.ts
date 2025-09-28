@@ -262,7 +262,7 @@ function generatePaymentDetails(paymentMethod: string, amount: number) {
       }
     case "card":
       return {
-        paymentUrl: `https://payment.ghanadatapro.com/pay?amount=${amount}&ref=${Date.now()}`,
+        paymentUrl: `https://payment.iSellData.com/pay?amount=${amount}&ref=${Date.now()}`,
         processor: "Paystack",
       }
     default:
