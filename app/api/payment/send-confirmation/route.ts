@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
 import { smsService } from '@/lib/arkesel-sms'
 
 export async function POST(request: NextRequest) {

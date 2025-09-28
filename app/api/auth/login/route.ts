@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+
+export const dynamic = 'force-dynamic'
 import bcrypt from "bcrypt"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { hubnetAPI } from '@/lib/hubnet-api'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     console.log('Fetching Hubnet balance for admin dashboard')

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { smsService } from "@/lib/hubnet-api"
 
+export const dynamic = 'force-dynamic'
+
 // Webhook endpoint for Hubnet transaction status updates
 export async function POST(request: NextRequest) {
   try {

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { headers } from "next/headers"
 
+export const dynamic = 'force-dynamic'
+
 // Webhook endpoint for payment confirmations from payment providers
 export async function POST(request: NextRequest) {
   try {

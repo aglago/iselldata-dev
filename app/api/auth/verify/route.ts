@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+
+export const dynamic = 'force-dynamic'
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
 
 function verifyToken(token: string): any {

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { telecomAPI } from "@/lib/telecom-api"
 
+export const dynamic = 'force-dynamic'
+
 // Endpoint to fetch live packages from telecom APIs
 export async function GET(request: NextRequest) {
   try {

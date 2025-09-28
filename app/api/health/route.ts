@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { apiMonitor } from "@/lib/api-monitor"
 
+export const dynamic = 'force-dynamic'
+
 // Health check endpoint for monitoring API status
 export async function GET() {
   try {

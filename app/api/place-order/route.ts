@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
 import { hubnetAPI } from '@/lib/hubnet-api'
 import { smsService } from '@/lib/arkesel-sms'
 import { getHubnetCost, estimateHubnetCost } from '@/lib/hubnet-pricing'

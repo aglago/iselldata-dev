@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -24,8 +26,8 @@ export async function GET() {
     }
 
     // Group revenue by day
-    const dailyRevenue = {}
-    const networkBreakdown = { mtn: 0, airteltigo: 0, telecel: 0 }
+    const dailyRevenue: Record<string, number> = {}
+    const networkBreakdown: Record<string, number> = { mtn: 0, airteltigo: 0, telecel: 0 }
     let totalRevenue = 0
 
     revenueData.forEach(order => {
@@ -39,8 +41,9 @@ export async function GET() {
       dailyRevenue[date] += amount
       
       // Network breakdown
-      if (networkBreakdown.hasOwnProperty(order.network)) {
-        networkBreakdown[order.network] += amount
+      const network = order.network.toLowerCase()
+      if (network in networkBreakdown) {
+        networkBreakdown[network] += amount
       }
       
       totalRevenue += amount
@@ -80,23 +83,23 @@ export async function GET() {
       `)
       .eq('orders.payment_status', 'confirmed')
 
-    let customerSpending = {}
+    let customerSpending: Record<string, number> = {}
     if (!customersError && topCustomers) {
       topCustomers.forEach(customer => {
         const customerKey = customer.name || customer.phone
         if (!customerSpending[customerKey]) {
           customerSpending[customerKey] = 0
         }
-        customer.orders.forEach(order => {
+        customer.orders.forEach((order: any) => {
           customerSpending[customerKey] += Number(order.price)
         })
       })
     }
 
     const topCustomersList = Object.entries(customerSpending)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
       .slice(0, 5)
-      .map(([name, amount]) => ({ name, amount }))
+      .map(([name, amount]) => ({ name, amount: amount as number }))
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+
+export const dynamic = 'force-dynamic'
 function getClientIP(request: NextRequest): string {
   // Try different headers to get the real IP
   const forwarded = request.headers.get('x-forwarded-for')
