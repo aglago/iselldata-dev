@@ -34,14 +34,14 @@ interface OrderStatus {
 
 export default function TrackOrderPage() {
   const searchParams = useSearchParams()
-  const [orderId, setOrderId] = useState(searchParams?.get("id") || "")
+  const [trackingInput, setTrackingInput] = useState(searchParams?.get("id") || searchParams?.get("trackingId") || "")
   const [orderStatus, setOrderStatus] = useState<OrderStatus | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
   const trackOrder = async () => {
-    if (!orderId.trim()) {
-      setError("Please enter an order ID")
+    if (!trackingInput.trim()) {
+      setError("Please enter a tracking ID or order ID")
       return
     }
 
@@ -49,12 +49,17 @@ export default function TrackOrderPage() {
     setError("")
 
     try {
-      const response = await fetch(`/api/orders/track?id=${orderId}`)
-      if (response.ok) {
-        const data = await response.json()
+      // Determine if input is tracking ID (TRK...) or order ID (GD...)
+      const isTrackingId = trackingInput.startsWith('TRK')
+      const queryParam = isTrackingId ? `trackingId=${trackingInput}` : `id=${trackingInput}`
+      
+      const response = await fetch(`/api/orders/track?${queryParam}`)
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
         setOrderStatus(data.order)
       } else {
-        setError("Order not found")
+        setError(data.message || "Order not found")
       }
     } catch (error) {
       setError("Failed to track order")
@@ -64,7 +69,7 @@ export default function TrackOrderPage() {
   }
 
   useEffect(() => {
-    if (orderId) {
+    if (trackingInput) {
       trackOrder()
     }
   }, [])
@@ -120,13 +125,13 @@ export default function TrackOrderPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="orderId">Order ID</Label>
+              <Label htmlFor="trackingInput">Tracking ID or Order ID</Label>
               <div className="flex gap-2">
                 <Input
-                  id="orderId"
-                  placeholder="Enter Order ID (e.g., GD1234567890ABCD)"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
+                  id="trackingInput"
+                  placeholder="Enter Tracking ID (TRK...) or Order ID (GD...)"
+                  value={trackingInput}
+                  onChange={(e) => setTrackingInput(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && trackOrder()}
                 />
                 <Button onClick={trackOrder} disabled={isLoading}>
