@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { smsService } from "@/lib/hubnet-api"
+import { smsService } from "@/lib/arkesel-sms"
+import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,9 +62,33 @@ async function processHubnetWebhook(payload: any) {
     const isSuccessful = status === true && code === "0000"
     const isFailed = status === false || (code !== "0000" && code !== undefined)
 
-    // In production, update order status in database
-    // For now, just log the status change
-    console.log(`Order ${reference} status: ${isSuccessful ? "DELIVERED" : isFailed ? "FAILED" : "PENDING"}`)
+    // Update order status in database
+    const supabase = await createClient()
+    
+    let deliveryStatus = 'processing'
+    if (isSuccessful) {
+      deliveryStatus = 'delivered'
+    } else if (isFailed) {
+      deliveryStatus = 'failed'
+    }
+    
+    console.log(`Updating order ${reference} status to: ${deliveryStatus.toUpperCase()}`)
+    
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        delivery_status: deliveryStatus,
+        hubnet_transaction_id: transaction_id,
+        hubnet_payment_id: payment_id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('order_id', reference)
+    
+    if (updateError) {
+      console.error('Failed to update order status:', updateError)
+    } else {
+      console.log(`Order ${reference} status updated successfully to: ${deliveryStatus}`)
+    }
 
     return {
       success: true,
@@ -96,10 +121,10 @@ async function handleStatusNotification(result: any) {
     const networkDisplay = mapHubnetToDisplay(network)
 
     if (isDelivered) {
-      await smsService.sendDeliveryConfirmation(phone, orderId, networkDisplay, packageSize)
+      await smsService.sendDeliveryConfirmation(phone, orderId, packageSize, networkDisplay)
       console.log(`Delivery confirmation sent for order ${orderId}`)
     } else if (isFailed) {
-      await sendFailureNotification(phone, orderId, reason || "Unknown error")
+      await smsService.sendDeliveryFailure(phone, orderId, packageSize, networkDisplay)
       console.log(`Failure notification sent for order ${orderId}`)
     }
     // If status is still pending, no SMS needed yet
@@ -117,19 +142,6 @@ function mapHubnetToDisplay(hubnetNetwork: string): string {
   return networkMap[hubnetNetwork as keyof typeof networkMap] || hubnetNetwork.toUpperCase()
 }
 
-async function sendFailureNotification(phoneNumber: string, orderId: string, reason: string) {
-  try {
-    const message = `Sorry, we couldn't deliver your data bundle. Order: ${orderId}. Reason: ${reason}. Your payment will be refunded within 24 hours. Contact support: 050 958 1027 - iSellData`
-
-    console.log(`Failure SMS to ${phoneNumber}: ${message}`)
-
-    // In production, integrate with real SMS provider
-    // For now, simulate SMS sending
-    return new Promise((resolve) => setTimeout(resolve, 500))
-  } catch (error) {
-    console.error("Failed to send failure notification:", error)
-  }
-}
 
 export async function GET() {
   return NextResponse.json({
