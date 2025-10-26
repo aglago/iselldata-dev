@@ -70,19 +70,6 @@ const getDeliveryInfo = (network: string) => {
   }
 };
 
-const getNetworkCode = (network: string) => {
-  switch (network.toLowerCase()) {
-    case "mtn":
-      return "MTN";
-    case "telecel":
-    case "vodafone":
-      return "VOD";
-    case "airteltigo":
-      return "ATM";
-    default:
-      return "MTN";
-  }
-};
 
 export function OrderModal({
   isOpen,
@@ -94,17 +81,12 @@ export function OrderModal({
     phoneNumber: "",
     customerName: "",
   });
-  const [paymentData, setPaymentData] = useState({
-    paymentNetwork: "",
-    paymentPhoneNumber: "",
-    accountName: "",
-  });
+  const [customerEmail, setCustomerEmail] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isValidatingAccount, setIsValidatingAccount] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [trackingId, setTrackingId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'confirmed' | 'failed'>('pending');
-  const [ogateWayTransactionId, setOgateWayTransactionId] = useState<string | null>(null);
+  const [paystackReference, setPaystackReference] = useState<string | null>(null);
 
   const businessStatus = isBusinessHours();
   const deliveryInfo = selectedPackage
@@ -115,82 +97,34 @@ export function OrderModal({
     setOrderData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePaymentInputChange = (field: string, value: string) => {
-    setPaymentData((prev) => ({ ...prev, [field]: value }));
-    
-    // Clear account name when network or phone number changes
-    if (field === "paymentNetwork" || field === "paymentPhoneNumber") {
-      setPaymentData((prev) => ({ ...prev, accountName: "" }));
-    }
-  };
 
   const validatePhoneNumber = (phone: string) => {
     const ghanaPhoneRegex = /^(\+233|0)[2-9]\d{8}$/;
     return ghanaPhoneRegex.test(phone.replace(/\s/g, ""));
   };
 
-  const validateAccount = async () => {
-    if (!paymentData.paymentNetwork || !paymentData.paymentPhoneNumber) {
-      toast.error("Please select network and enter phone number");
-      return;
-    }
-
-    if (!validatePhoneNumber(paymentData.paymentPhoneNumber)) {
-      toast.error("Please enter a valid Ghana phone number");
-      return;
-    }
-
-    setIsValidatingAccount(true);
-
-    try {
-      const response = await fetch('/api/payment/validate-account', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          currency: 'GHS',
-          accountCode: getNetworkCode(paymentData.paymentNetwork),
-          accountNumber: paymentData.paymentPhoneNumber,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.accountName) {
-        setPaymentData((prev) => ({ ...prev, accountName: result.accountName }));
-      } else {
-        toast.error("Could not validate account. Please check the phone number and network.");
-      }
-    } catch (error) {
-      console.error("Account validation error:", error);
-      toast.error("Failed to validate account. Please try again.");
-    } finally {
-      setIsValidatingAccount(false);
-    }
-  };
 
   const handleContinueToPayment = () => {
     if (!orderData.phoneNumber || !validatePhoneNumber(orderData.phoneNumber)) {
       toast.error("Please enter a valid Ghana phone number");
       return;
     }
+    if (!customerEmail || !/\S+@\S+\.\S+/.test(customerEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     setStep(2);
   };
 
   const handleProcessPayment = async () => {
-    if (!paymentData.paymentNetwork || !paymentData.paymentPhoneNumber || !paymentData.accountName) {
-      toast.error("Please validate your payment account first");
+    if (!customerEmail) {
+      toast.error("Please enter your email address");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      const timestamp = Date.now().toString().slice(-8);
-      const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const newOrderId = `GD${timestamp}${randomId}`;
-
       const paymentResponse = await fetch('/api/payment/initiate', {
         method: 'POST',
         headers: {
@@ -198,55 +132,58 @@ export function OrderModal({
         },
         body: JSON.stringify({
           amount: selectedPackage?.price,
-          reason: `${selectedPackage?.size} ${selectedPackage?.network.toUpperCase()} data package`,
-          currency: 'GHS',
-          network: getNetworkCode(paymentData.paymentNetwork),
-          accountName: paymentData.accountName,
-          accountNumber: paymentData.paymentPhoneNumber,
-          reference: newOrderId,
           packageDetails: selectedPackage,
-          customerDetails: orderData,
+          customerDetails: {
+            ...orderData,
+            email: customerEmail
+          },
         }),
       });
 
       if (!paymentResponse.ok) {
-        throw new Error('Payment processing failed');
+        throw new Error('Payment initialization failed');
       }
 
       const paymentResult = await paymentResponse.json();
       
       if (paymentResult.success) {
-        setOrderId(newOrderId);
+        setOrderId(paymentResult.orderId);
         setTrackingId(paymentResult.trackingId);
-        setOgateWayTransactionId(paymentResult.transactionId);
+        setPaystackReference(paymentResult.data.reference);
+        
+        // Open Paystack popup
+        window.open(paymentResult.authorizationUrl, '_blank');
+        
+        // Move to step 3 to show payment confirmation
         setStep(3);
       } else {
-        throw new Error(paymentResult.message || 'Payment failed');
+        throw new Error(paymentResult.message || 'Payment initialization failed');
       }
     } catch (error) {
       console.error("Payment processing error:", error);
-      toast.error("Failed to process payment. Please try again.");
+      toast.error("Failed to initialize payment. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const checkPaymentStatusFromOGateway = async () => {
-    if (!ogateWayTransactionId) {
-      toast.error('No transaction ID found');
+  const checkPaymentStatusFromPaystack = async () => {
+    if (!paystackReference) {
+      toast.error('No payment reference found');
       return;
     }
     
     setPaymentStatus('checking');
     
     try {
-      const response = await fetch(`/api/payment/verify?transactionId=${ogateWayTransactionId}`);
+      const response = await fetch(`/api/payment/verify?reference=${paystackReference}`);
       const result = await response.json();
       
       if (result.success) {
-        if (result.status === 'success' || result.status === 'confirmed') {
+        if (result.status === 'confirmed') {
           setPaymentStatus('confirmed');
-        } else if (result.status === 'failed' || result.status === 'cancelled') {
+          toast.success('Payment confirmed! Your data will be delivered automatically.');
+        } else if (result.status === 'failed') {
           setPaymentStatus('failed');
         } else {
           // Still pending
@@ -304,18 +241,18 @@ export function OrderModal({
   };
   
   const handleCheckPayment = () => {
-    checkPaymentStatusFromOGateway();
+    checkPaymentStatusFromPaystack();
   };
 
   const resetModal = () => {
     setStep(1);
     setOrderData({ phoneNumber: "", customerName: "" });
-    setPaymentData({ paymentNetwork: "", paymentPhoneNumber: "", accountName: "" });
+    setCustomerEmail("");
     setIsProcessing(false);
-    setIsValidatingAccount(false);
     setOrderId(null);
     setPaymentStatus('pending');
-    setOgateWayTransactionId(null);
+    setPaystackReference(null);
+    setTrackingId(null);
     onClose();
   };
 
@@ -406,6 +343,20 @@ export function OrderModal({
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="customerEmail">Email Address *</Label>
+              <Input
+                id="customerEmail"
+                type="email"
+                placeholder="your@email.com"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Required for payment receipt and order notifications
+              </p>
+            </div>
+
             <Button
               onClick={handleContinueToPayment}
               className="w-full"
@@ -415,62 +366,44 @@ export function OrderModal({
           </div>
         )}
 
-        {/* Step 2: Payment Information */}
+        {/* Step 2: Payment */}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="paymentNetwork">Payment Network *</Label>
-              <Select
-                value={paymentData.paymentNetwork}
-                onValueChange={(value) => handlePaymentInputChange("paymentNetwork", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment network" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mtn">MTN Mobile Money</SelectItem>
-                  <SelectItem value="telecel">Telecel Cash</SelectItem>
-                  <SelectItem value="airteltigo">AirtelTigo Money</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paymentPhoneNumber">Payment Phone Number *</Label>
-              <Input
-                id="paymentPhoneNumber"
-                placeholder="0XX XXX XXXX"
-                value={paymentData.paymentPhoneNumber}
-                onChange={(e) => handlePaymentInputChange("paymentPhoneNumber", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Phone number to debit payment from
-              </p>
-            </div>
-
-            <Button
-              onClick={validateAccount}
-              disabled={isValidatingAccount || !paymentData.paymentNetwork || !paymentData.paymentPhoneNumber}
-              variant="outline"
-              className="w-full"
-            >
-              {isValidatingAccount ? "Validating..." : "Validate Account"}
-            </Button>
-
-            {paymentData.accountName && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm font-medium text-green-800">Account Validated</p>
-                <p className="text-sm text-green-600">{paymentData.accountName}</p>
+            <div className="text-center space-y-3">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-medium text-blue-800">Secure Payment with Paystack</h3>
+                <p className="text-sm text-blue-600 mt-1">
+                  Pay securely with your debit card, bank transfer, or mobile money
+                </p>
               </div>
-            )}
+              
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Amount:</strong> GH₵{selectedPackage?.price}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Package:</strong> {selectedPackage?.size} {selectedPackage?.network.toUpperCase()}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Phone:</strong> {orderData.phoneNumber}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <strong>Email:</strong> {customerEmail}
+                </p>
+              </div>
+            </div>
 
             <Button
               onClick={handleProcessPayment}
-              disabled={isProcessing || !paymentData.accountName}
-              className="w-full"
+              disabled={isProcessing}
+              className="w-full bg-green-600 hover:bg-green-700"
             >
-              {isProcessing ? "Processing Payment..." : `Pay GH₵${selectedPackage.price}`}
+              {isProcessing ? "Opening Payment..." : `Pay GH₵${selectedPackage?.price} with Paystack`}
             </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Your payment is secured by Paystack. You will be redirected to complete payment.
+            </p>
           </div>
         )}
 
@@ -479,10 +412,10 @@ export function OrderModal({
           <div className="space-y-4">
             <div className="text-center space-y-3">
               {paymentStatus === 'pending' && (
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                  <p className="font-medium text-slate-800">Awaiting Payment</p>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Check your phone for the payment prompt from {paymentData.paymentNetwork.toUpperCase()} and complete the payment
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="font-medium text-blue-800">Payment Window Opened</p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Complete your payment in the Paystack window that opened. If it didn't open, click "Check Payment Status" below.
                   </p>
                 </div>
               )}
@@ -497,7 +430,7 @@ export function OrderModal({
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  <strong>Amount:</strong> GH₵{selectedPackage.price}
+                  <strong>Amount:</strong> GH₵{selectedPackage?.price}
                 </p>
               </div>
             </div>
@@ -509,10 +442,10 @@ export function OrderModal({
                   className="w-full"
                   disabled={isProcessing}
                 >
-                  I have made payment
+                  Check Payment Status
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  Click after completing the payment on your phone
+                  Click after completing payment in the Paystack window
                 </p>
               </div>
             )}

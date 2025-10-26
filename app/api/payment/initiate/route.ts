@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { paystackAPI, PaystackAPI } from '@/lib/paystack'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,68 +8,42 @@ export async function POST(request: NextRequest) {
   try {
     const {
       amount,
-      reason,
-      currency,
-      network,
-      accountName,
-      accountNumber,
-      reference,
       packageDetails,
       customerDetails
     } = await request.json();
 
-    console.log('Initiating payment with data:', {
+    console.log('Initiating Paystack payment:', {
       amount,
-      reason,
-      currency,
-      network,
-      accountName,
-      accountNumber,
-      reference,
       packageDetails,
       customerDetails
     });
 
-    // Make API call to ogateway
-    const ogatewayResponse = await fetch('https://api.ogateway.io/collections/mobilemoney', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'content-type': 'application/json',
-        'Authorization': process.env.OGATEWAY_API_KEY!,
-      },
-      body: JSON.stringify({
-        amount: amount,
-        reason: reason,
-        currency: currency,
-        network: network,
-        accountName: accountName,
-        accountNumber: accountNumber,
-        reference: reference,
-        callbackURL: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
-      }),
-    });
+    // Generate unique reference for this transaction
+    const reference = PaystackAPI.generateReference('GD')
+    
+    // Prepare Paystack transaction data
+    const paystackData = {
+      email: customerDetails.email || `${customerDetails.phoneNumber}@iselldata.com`, // Use phone as fallback email
+      amount: PaystackAPI.toPesewas(amount), // Convert to pesewas
+      reference: reference,
+      callback_url: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
+      metadata: {
+        orderId: reference,
+        customerName: customerDetails.customerName || customerDetails.name || '',
+        packageSize: packageDetails.size,
+        network: packageDetails.network,
+        phoneNumber: customerDetails.phoneNumber
+      }
+    }
+    
+    // Initialize Paystack transaction
+    const paystackResponse = await paystackAPI.initializeTransaction(paystackData)
 
-    console.log('Request sent to ogateway:', {
-      amount,
-      reason,
-      currency,
-      network,
-      accountName,
-      accountNumber,
-      reference,
-      callbackURL: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
-    });
-
-    console.log('API URL:', 'https://api.ogateway.io/collections/mobilemoney');
-
-    const paymentData = await ogatewayResponse.json();
-
-    if (!ogatewayResponse.ok) {
-        console.log('Payment initiation failed:', paymentData);
+    if (!paystackResponse.status) {
+      console.log('Paystack initiation failed:', paystackResponse);
       return NextResponse.json({ 
         success: false, 
-        message: paymentData.message || 'Payment initiation failed' 
+        message: paystackResponse.message || 'Payment initiation failed' 
       }, { status: 400 });
     }
 
@@ -130,9 +105,9 @@ export async function POST(request: NextRequest) {
         payment_method: 'mobile_money',
         payment_status: 'pending',
         delivery_status: 'pending',
-        reference: paymentData.reference || reference,
+        reference: reference,
         tracking_id: trackingId,
-        ogateway_payment_id: paymentData.id,
+        paystack_reference: reference,
       })
       .select()
       .single()
@@ -144,11 +119,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      data: paymentData,
+      data: {
+        authorization_url: paystackResponse.data.authorization_url,
+        access_code: paystackResponse.data.access_code,
+        reference: paystackResponse.data.reference
+      },
       orderId: reference,
       trackingId: trackingId,
-      transactionId: paymentData.id,
-      message: 'Payment initiated successfully'
+      authorizationUrl: paystackResponse.data.authorization_url,
+      message: 'Payment initialized successfully. Complete payment to proceed.'
     });
   } catch (error) {
     console.error('Payment processing error:', error);

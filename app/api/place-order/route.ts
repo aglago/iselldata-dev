@@ -65,6 +65,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
+    // Check if order already has a transaction ID (prevents duplicate processing)
+    if (order.hubnet_transaction_id) {
+      console.log(`Order ${order.order_id} already has transaction ID: ${order.hubnet_transaction_id}`)
+      return NextResponse.json({
+        success: false,
+        message: 'This order is already being processed. If you have not received your data bundle, please contact support.',
+        transactionExists: true
+      }, { status: 400 })
+    }
+    
     console.log(`Processing data delivery for order: ${order.order_id}`)
     
     // Handle Telecel orders separately (manual processing)

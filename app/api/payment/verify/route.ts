@@ -1,47 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { paystackAPI } from '@/lib/paystack'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const transactionId = searchParams.get('transactionId')
+    const reference = searchParams.get('reference')
 
-    if (!transactionId) {
+    if (!reference) {
       return NextResponse.json({
         success: false,
-        message: 'Transaction ID is required'
+        message: 'Payment reference is required'
       }, { status: 400 })
     }
 
-    // Check payment status from OGateway
-    const ogateWayResponse = await fetch(`https://api.ogateway.io/payments/${transactionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': process.env.OGATEWAY_API_KEY!,
-        'Content-Type': 'application/json',
-      },
-    })
+    // Check payment status from Paystack
+    const paystackResponse = await paystackAPI.verifyTransaction(reference)
 
-    if (!ogateWayResponse.ok) {
-      console.error('OGateway API error:', ogateWayResponse.status, ogateWayResponse.statusText)
+    if (!paystackResponse.status) {
+      console.error('Paystack verification failed:', paystackResponse.message)
       return NextResponse.json({
         success: false,
-        message: 'Failed to verify payment with OGateway'
+        message: 'Failed to verify payment with Paystack'
       }, { status: 500 })
     }
 
-    const paymentData = await ogateWayResponse.json()
-    console.log('OGateway payment verification:', paymentData)
+    const paymentData = paystackResponse.data
+    console.log('Paystack payment verification:', paymentData)
 
-    // Map OGateway status to our status
+    // Map Paystack status to our status
     const paymentStatus = paymentData.status.toLowerCase()
     let ourStatus = 'pending'
     
-    if (paymentStatus === 'success' || paymentStatus === 'successful' || paymentStatus === 'completed') {
+    if (paymentStatus === 'success') {
       ourStatus = 'confirmed'
-    } else if (paymentStatus === 'failed' || paymentStatus === 'cancelled' || paymentStatus === 'declined') {
+    } else if (paymentStatus === 'failed' || paymentStatus === 'abandoned') {
       ourStatus = 'failed'
     }
 
@@ -49,23 +44,23 @@ export async function GET(request: NextRequest) {
     if (ourStatus === 'confirmed') {
       const supabase = await createClient()
       
-      // Update order status in database - try both ogateway_payment_id and reference
+      // Update order status in database using Paystack reference
       const { data: updateResult, error: updateError } = await supabase
         .from('orders')
         .update({
           payment_status: 'confirmed',
           delivery_status: 'pending',
-          ogateway_payment_id: transactionId,
+          paystack_reference: reference,
           updated_at: new Date().toISOString()
         })
-        .or(`ogateway_payment_id.eq.${transactionId},reference.eq.${paymentData.reference_business},order_id.eq.${paymentData.reference_business}`)
+        .or(`paystack_reference.eq.${reference},reference.eq.${reference},order_id.eq.${reference}`)
         .select()
 
       if (updateError) {
         console.error('Error updating order status:', updateError)
         // Don't fail the request, just log the error
       } else {
-        console.log('Order status updated successfully for transaction:', transactionId, 'Updated rows:', updateResult?.length || 0)
+        console.log('Order status updated successfully for reference:', reference, 'Updated rows:', updateResult?.length || 0)
         if (updateResult && updateResult.length === 0) {
           console.warn('No orders were updated - order might not exist or already processed')
         } else if (updateResult && updateResult.length > 0) {
@@ -101,9 +96,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       status: ourStatus,
-      ogateWayStatus: paymentStatus,
-      amount: paymentData.amount,
-      reference: paymentData.reference_business,
+      paystackStatus: paymentStatus,
+      amount: paymentData.amount / 100, // Convert from pesewas to cedis
+      reference: paymentData.reference,
       transactionId: paymentData.id
     })
   } catch (error) {

@@ -1,25 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-
-export const dynamic = 'force-dynamic'
 import { hubnetAPI } from '@/lib/hubnet-api'
 import { smsService } from '@/lib/arkesel-sms'
+import crypto from 'crypto'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const callbackData = await request.json()
-    console.log('Payment callback received:', callbackData)
+    const body = await request.text()
+    const signature = request.headers.get('x-paystack-signature')
+    
+    // Verify Paystack webhook signature
+    if (process.env.PAYSTACK_SECRET_KEY) {
+      const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(body).digest('hex')
+      if (hash !== signature) {
+        console.error('Invalid Paystack webhook signature')
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Invalid signature' 
+        }, { status: 401 })
+      }
+    }
+    
+    const callbackData = JSON.parse(body)
+    console.log('Paystack webhook received:', callbackData)
+    
+    // Only process charge.success events
+    if (callbackData.event !== 'charge.success') {
+      console.log('Ignoring non-success webhook event:', callbackData.event)
+      return NextResponse.json({ success: true, message: 'Event ignored' })
+    }
     
     const supabase = await createClient()
     
-    // Extract payment info from callback
+    // Extract payment info from Paystack webhook
+    const paymentData = callbackData.data
     const { 
       reference, 
       status, 
-      id: ogatewayPaymentId,
+      id: paystackPaymentId,
       amount,
       currency 
-    } = callbackData
+    } = paymentData
     
     if (!reference) {
       return NextResponse.json({ 
@@ -28,7 +51,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Find the order by reference or ogateway_payment_id
+    // Find the order by reference or paystack_reference
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -39,22 +62,22 @@ export async function POST(request: NextRequest) {
           email
         )
       `)
-      .or(`reference.eq.${reference},ogateway_payment_id.eq.${ogatewayPaymentId}`)
+      .or(`reference.eq.${reference},paystack_reference.eq.${reference},order_id.eq.${reference}`)
       .single()
     
     if (orderError || !order) {
-      console.error('Order not found for callback:', { reference, ogatewayPaymentId })
+      console.error('Order not found for Paystack callback:', { reference, paystackPaymentId })
       return NextResponse.json({ 
         success: false, 
         message: 'Order not found' 
       }, { status: 404 })
     }
     
-    // Update payment status based on callback
+    // Update payment status based on Paystack callback
     let paymentStatus = 'failed'
     let deliveryStatus = order.delivery_status
     
-    if (status === 'successful' || status === 'completed') {
+    if (status === 'success') {
       paymentStatus = 'confirmed'
       deliveryStatus = 'processing'
     } else if (status === 'pending') {
@@ -67,6 +90,7 @@ export async function POST(request: NextRequest) {
       .update({
         payment_status: paymentStatus,
         delivery_status: deliveryStatus,
+        paystack_reference: reference,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id)
