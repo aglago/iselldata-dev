@@ -201,7 +201,12 @@ export async function POST(request: NextRequest) {
         order.phone
       )
       
-      if (hubnetResult.status && hubnetResult.code === '0000') {
+      // Check for success in multiple ways (Hubnet API can be inconsistent)
+      const isSuccess = (hubnetResult.status && hubnetResult.code === '0000') || 
+                       (hubnetResult.data?.status === true && hubnetResult.data?.code === '0000') ||
+                       (hubnetResult.message && hubnetResult.message.includes("processed and is now complete"));
+      
+      if (isSuccess) {
         // Update order with transaction details (processing, not delivered yet)
         await supabase
           .from('orders')
@@ -234,26 +239,7 @@ export async function POST(request: NextRequest) {
           status: 'processing'
         })
       } else {
-        // Even if hubnetResult.status is false, check if the response indicates success
-        if (hubnetResult.data?.status === true && hubnetResult.data?.code === '0000') {
-          // This is actually a success case, treat it as successful
-          await supabase
-            .from('orders')
-            .update({
-              delivery_status: 'processing',
-              hubnet_transaction_id: hubnetResult.batch_id || hubnetResult.transaction_id,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', order.id)
-          
-          return NextResponse.json({
-            success: true,
-            message: 'Order placed successfully and is being processed',
-            hubnetTransactionId: hubnetResult.batch_id || hubnetResult.transaction_id,
-            status: 'processing'
-          })
-        }
-        
+        // This should never happen now since we check all success conditions above
         throw new Error(hubnetResult.message || 'Hubnet delivery failed')
       }
     } catch (error) {

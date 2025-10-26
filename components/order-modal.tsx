@@ -151,11 +151,14 @@ export function OrderModal({
         setTrackingId(paymentResult.trackingId);
         setPaystackReference(paymentResult.data.reference);
         
-        // Open Paystack popup
-        window.open(paymentResult.authorizationUrl, '_blank');
+        // Redirect to Paystack payment page with success callback
+        const successUrl = `${window.location.origin}/success?orderId=${paymentResult.orderId}&trackingId=${paymentResult.trackingId}&amount=${selectedPackage?.price}&package=${selectedPackage?.size}&network=${selectedPackage?.network}&phone=${orderData.phoneNumber}`;
         
-        // Move to step 3 to show payment confirmation
-        setStep(3);
+        // Add success URL to Paystack payment URL
+        const paymentUrl = `${paymentResult.authorizationUrl}&callback_url=${encodeURIComponent(successUrl)}`;
+        
+        // Redirect to Paystack (same window)
+        window.location.href = paymentUrl;
       } else {
         throw new Error(paymentResult.message || 'Payment initialization failed');
       }
