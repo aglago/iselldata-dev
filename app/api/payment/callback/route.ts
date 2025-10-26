@@ -163,12 +163,17 @@ async function processDataDelivery(order: any) {
       })
       .eq('id', order.id)
     
-    // Send SMS confirmation
+    // Send SMS confirmation with tracking URL
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.includes('://') 
+      ? process.env.NEXT_PUBLIC_BASE_URL 
+      : `https://${process.env.NEXT_PUBLIC_BASE_URL}`
+    
     await smsService.sendDeliveryConfirmation(
       order.phone, 
       order.tracking_id, 
       order.package_size, 
-      order.network
+      order.network,
+      baseUrl
     )
     
     return {

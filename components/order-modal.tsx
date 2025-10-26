@@ -13,15 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Smartphone, Clock, ArrowLeft } from "lucide-react";
+import { Smartphone, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -76,17 +69,12 @@ export function OrderModal({
   onClose,
   package: selectedPackage,
 }: OrderModalProps) {
-  const [step, setStep] = useState(1);
   const [orderData, setOrderData] = useState({
     phoneNumber: "",
     customerName: "",
   });
   const [customerEmail, setCustomerEmail] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [trackingId, setTrackingId] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'checking' | 'confirmed' | 'failed'>('pending');
-  const [paystackReference, setPaystackReference] = useState<string | null>(null);
 
   const businessStatus = isBusinessHours();
   const deliveryInfo = selectedPackage
@@ -104,7 +92,7 @@ export function OrderModal({
   };
 
 
-  const handleContinueToPayment = () => {
+  const handleContinueToPayment = async () => {
     if (!orderData.phoneNumber || !validatePhoneNumber(orderData.phoneNumber)) {
       toast.error("Please enter a valid Ghana phone number");
       return;
@@ -113,7 +101,9 @@ export function OrderModal({
       toast.error("Please enter a valid email address");
       return;
     }
-    setStep(2);
+    
+    // Directly process payment (skip step 2)
+    await handleProcessPayment();
   };
 
   const handleProcessPayment = async () => {
@@ -147,9 +137,6 @@ export function OrderModal({
       const paymentResult = await paymentResponse.json();
       
       if (paymentResult.success) {
-        setOrderId(paymentResult.orderId);
-        setTrackingId(paymentResult.trackingId);
-        setPaystackReference(paymentResult.data.reference);
         
         // Redirect to Paystack payment page with success callback
         const successUrl = `${window.location.origin}/success?orderId=${paymentResult.orderId}&trackingId=${paymentResult.trackingId}&amount=${selectedPackage?.price}&package=${selectedPackage?.size}&network=${selectedPackage?.network}&phone=${orderData.phoneNumber}`;
@@ -170,92 +157,11 @@ export function OrderModal({
     }
   };
 
-  const checkPaymentStatusFromPaystack = async () => {
-    if (!paystackReference) {
-      toast.error('No payment reference found');
-      return;
-    }
-    
-    setPaymentStatus('checking');
-    
-    try {
-      const response = await fetch(`/api/payment/verify?reference=${paystackReference}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        if (result.status === 'confirmed') {
-          setPaymentStatus('confirmed');
-          toast.success('Payment confirmed! Your data will be delivered automatically.');
-        } else if (result.status === 'failed') {
-          setPaymentStatus('failed');
-        } else {
-          // Still pending
-          setPaymentStatus('pending');
-          toast.info('Payment is still processing. Please try again in a moment.');
-        }
-      } else {
-        toast.error(result.message || 'Failed to verify payment');
-        setPaymentStatus('pending');
-      }
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-      toast.error('Failed to verify payment. Please try again.');
-      setPaymentStatus('pending');
-    }
-  };
-  
-  const handlePaymentConfirmed = async () => {
-    if (!orderId) {
-      toast.error('Order ID not found');
-      return;
-    }
-
-    setIsProcessing(true);
-    
-    try {
-      // Send SMS confirmation
-      const response = await fetch('/api/payment/send-confirmation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId: orderId,
-          phone: orderData.phoneNumber,
-          packageSize: selectedPackage?.size || '',
-          network: selectedPackage?.network || ''
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast.success('Payment confirmed! Your data will be delivered shortly.');
-      } else {
-        toast.success('Payment confirmed! SMS notification failed but your data will be delivered shortly.');
-      }
-    } catch (error) {
-      console.error('SMS sending failed:', error);
-      toast.success('Payment confirmed! SMS notification failed but your data will be delivered shortly.');
-    } finally {
-      setIsProcessing(false);
-      resetModal();
-    }
-  };
-  
-  const handleCheckPayment = () => {
-    checkPaymentStatusFromPaystack();
-  };
 
   const resetModal = () => {
-    setStep(1);
     setOrderData({ phoneNumber: "", customerName: "" });
     setCustomerEmail("");
     setIsProcessing(false);
-    setOrderId(null);
-    setPaymentStatus('pending');
-    setPaystackReference(null);
-    setTrackingId(null);
     onClose();
   };
 
@@ -267,25 +173,10 @@ export function OrderModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-primary" />
-            {step === 1 && "Complete Your Order"}
-            {step === 2 && "Payment Details"}
-            {step === 3 && "Payment Confirmation"}
-            {(step === 2 || step === 3) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setStep(step - 1)}
-                className="ml-auto"
-                disabled={step === 3 && paymentStatus === 'checking'}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
+            Complete Your Order
           </DialogTitle>
           <DialogDescription>
             {selectedPackage.size} {selectedPackage.network.toUpperCase()} data package
-            {step === 2 && " - Step 2 of 3"}
-            {step === 3 && " - Step 3 of 3"}
           </DialogDescription>
         </DialogHeader>
 
@@ -318,9 +209,8 @@ export function OrderModal({
           </CardContent>
         </Card>
 
-        {/* Step 1: Delivery Information */}
-        {step === 1 && (
-          <div className="space-y-4">
+        {/* Order Information */}
+        <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phoneNumber">Phone Number (Delivery) *</Label>
               <Input
@@ -362,159 +252,13 @@ export function OrderModal({
 
             <Button
               onClick={handleContinueToPayment}
-              className="w-full"
-            >
-              Continue to Payment
-            </Button>
-          </div>
-        )}
-
-        {/* Step 2: Payment */}
-        {step === 2 && (
-          <div className="space-y-4">
-            <div className="text-center space-y-3">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="font-medium text-blue-800">Secure Payment with Paystack</h3>
-                <p className="text-sm text-blue-600 mt-1">
-                  Pay securely with your debit card, bank transfer, or mobile money
-                </p>
-              </div>
-              
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Amount:</strong> GH₵{selectedPackage?.price}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Package:</strong> {selectedPackage?.size} {selectedPackage?.network.toUpperCase()}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Phone:</strong> {orderData.phoneNumber}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Email:</strong> {customerEmail}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={handleProcessPayment}
               disabled={isProcessing}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               {isProcessing ? "Opening Payment..." : `Pay GH₵${selectedPackage?.price} with Paystack`}
             </Button>
+        </div>
 
-            <p className="text-xs text-center text-muted-foreground">
-              Your payment is secured by Paystack. You will be redirected to complete payment.
-            </p>
-          </div>
-        )}
-
-        {/* Step 3: Payment Confirmation */}
-        {step === 3 && (
-          <div className="space-y-4">
-            <div className="text-center space-y-3">
-              {paymentStatus === 'pending' && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="font-medium text-blue-800">Payment Window Opened</p>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Complete your payment in the Paystack window that opened. If it didn't open, click "Check Payment Status" below.
-                  </p>
-                </div>
-              )}
-              
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  <strong>Order ID:</strong> {orderId}
-                </p>
-                {trackingId && (
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Tracking ID:</strong> {trackingId}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  <strong>Amount:</strong> GH₵{selectedPackage?.price}
-                </p>
-              </div>
-            </div>
-
-            {paymentStatus === 'pending' && (
-              <div className="space-y-3">
-                <Button
-                  onClick={handleCheckPayment}
-                  className="w-full"
-                  disabled={isProcessing}
-                >
-                  Check Payment Status
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  Click after completing payment in the Paystack window
-                </p>
-              </div>
-            )}
-
-            {paymentStatus === 'checking' && (
-              <div className="text-center space-y-3">
-                <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-                <p className="text-sm text-muted-foreground">
-                  Verifying your payment... Please wait.
-                </p>
-              </div>
-            )}
-
-            {paymentStatus === 'confirmed' && (
-              <div className="space-y-3">
-                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg text-center">
-                  <p className="font-medium text-primary">Payment Confirmed! ✅</p>
-                  <p className="text-sm text-primary/80 mt-1">
-                    Your data bundle will be delivered to {orderData.phoneNumber} shortly.
-                  </p>
-                </div>
-                <Button
-                  onClick={handlePaymentConfirmed}
-                  className="w-full"
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Sending confirmation..." : "Complete Order"}
-                </Button>
-              </div>
-            )}
-
-            {paymentStatus === 'failed' && (
-              <div className="space-y-3">
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                  <p className="font-medium text-red-800">Payment Not Confirmed</p>
-                  <p className="text-sm text-red-600 mt-1">
-                    We couldn't verify your payment. Please try again or contact support.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Button
-                    onClick={handleCheckPayment}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Check Payment Again
-                  </Button>
-                  <Button
-                    onClick={() => setStep(2)}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Try New Payment
-                  </Button>
-                  <Button
-                    onClick={resetModal}
-                    variant="ghost"
-                    className="w-full"
-                  >
-                    Cancel Order
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

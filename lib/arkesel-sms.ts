@@ -61,8 +61,9 @@ export class ArkeselSMS {
     return this.sendSMS({ to: phone, message })
   }
 
-  async sendDeliveryConfirmation(phone: string, trackingId: string, packageSize: string, network: string) {
-    const message = `Great news! Your ${packageSize} ${network.toUpperCase()} data bundle has been initiated successfully. Tracking ID: ${trackingId}. Thank you for choosing iSellData! 🎉`
+  async sendDeliveryConfirmation(phone: string, trackingId: string, packageSize: string, network: string, baseUrl?: string) {
+    const trackingUrl = baseUrl ? `${baseUrl}/track/${trackingId}` : `https://iselldata.vercel.app/track/${trackingId}`
+    const message = `Great news! Your ${packageSize} ${network.toUpperCase()} data bundle has been delivered successfully. Tracking ID: ${trackingId}. Track your order: ${trackingUrl}. Thank you for choosing iSellData! 🎉`
     return this.sendSMS({ to: phone, message })
   }
 
