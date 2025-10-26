@@ -75,7 +75,10 @@ export async function GET(request: NextRequest) {
             console.log('Triggering data delivery for manually verified payment:', orderToDeliver.order_id)
             
             // Call place-order API to trigger data delivery
-            const deliveryResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/place-order`, {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.includes('://') 
+              ? process.env.NEXT_PUBLIC_BASE_URL 
+              : `https://${process.env.NEXT_PUBLIC_BASE_URL}`
+            const deliveryResponse = await fetch(`${baseUrl}/api/place-order`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

@@ -273,22 +273,35 @@ class HubnetAPIClient {
         volumeMB,
         reference: orderId,
         referrer: referrerPhone,
-        webhook: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/hubnet`,
+        webhook: process.env.NEXT_PUBLIC_BASE_URL?.includes('://') 
+          ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/hubnet`
+          : `https://${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/hubnet`,
       }
 
       console.log("Making Hubnet API call for order:", orderId)
       const response = await this.purchaseDataBundle(request)
 
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        order_id: orderId,
-        hubnet_transaction_id: response.transaction_id,
-        hubnet_payment_id: response.payment_id,
-        status: response.status ? "success" : "failed",
-        response_data: response,
-      })
+      // Get the actual order UUID for the transaction record
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("order_id", orderId)
+        .single()
 
-      if (transactionError) {
-        console.error("Failed to save transaction:", transactionError)
+      if (orderData) {
+        const { error: transactionError } = await supabase.from("transactions").insert({
+          order_id: orderData.id, // Use the actual UUID, not the order reference
+          hubnet_transaction_id: response.transaction_id,
+          hubnet_payment_id: response.payment_id,
+          status: response.status ? "success" : "failed",
+          response_data: response,
+        })
+
+        if (transactionError) {
+          console.error("Failed to save transaction:", transactionError)
+        }
+      } else {
+        console.error("Could not find order with order_id:", orderId)
       }
 
       if (response.status && response.code === "0000") {
