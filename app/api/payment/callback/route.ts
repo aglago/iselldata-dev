@@ -151,7 +151,13 @@ async function processDataDelivery(order: any) {
     order.phone
   )
   
-  if (hubnetResult.status && hubnetResult.code === '0000') {
+  // Check for success - either direct status/code or nested in data
+const isSuccess = (hubnetResult.status && hubnetResult.code === '0000') || 
+                  (hubnetResult.data?.status && hubnetResult.data?.code === '0000') ||
+                  (typeof hubnetResult.status === "string" && hubnetResult.status === "success" && hubnetResult.data?.status === true)
+
+  
+  if (isSuccess) {
     // Update order with delivery success
     await supabase
       .from('orders')
@@ -163,12 +169,12 @@ async function processDataDelivery(order: any) {
       })
       .eq('id', order.id)
     
-    // Send SMS confirmation with tracking URL
+    // Send order confirmation SMS with tracking URL (only when processing starts)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.includes('://') 
       ? process.env.NEXT_PUBLIC_BASE_URL 
       : `https://${process.env.NEXT_PUBLIC_BASE_URL}`
     
-    await smsService.sendDeliveryConfirmation(
+    await smsService.sendOrderConfirmation(
       order.phone, 
       order.tracking_id, 
       order.package_size, 

@@ -56,19 +56,14 @@ export class ArkeselSMS {
     }
   }
 
-  async sendOrderConfirmation(phone: string, trackingId: string, packageSize: string, network: string) {
-    const message = `Your ${packageSize} ${network.toUpperCase()} data order has been received! Tracking ID: ${trackingId}. Delivery in 15-30 mins. For support, WhatsApp us at 050 958 1027 with your tracking ID.`
-    return this.sendSMS({ to: phone, message })
-  }
-
-  async sendDeliveryConfirmation(phone: string, trackingId: string, packageSize: string, network: string, baseUrl?: string) {
+  async sendOrderConfirmation(phone: string, trackingId: string, packageSize: string, network: string, baseUrl?: string) {
     const trackingUrl = baseUrl ? `${baseUrl}/track/${trackingId}` : `https://iselldata.vercel.app/track/${trackingId}`
-    const message = `Great news! Your ${packageSize} ${network.toUpperCase()} data bundle has been delivered successfully. Tracking ID: ${trackingId}. Track your order: ${trackingUrl}. Thank you for choosing iSellData! 🎉`
+    const message = `Your ${packageSize} ${network.toUpperCase()} data order has been received and is being processed! Tracking ID: ${trackingId}. Delivery in 15-30 mins. Track: ${trackingUrl} | Support: 050 958 1027`
     return this.sendSMS({ to: phone, message })
   }
 
   async sendDeliveryFailure(phone: string, trackingId: string, packageSize: string, network: string) {
-    const message = `We're sorry, your ${packageSize} ${network.toUpperCase()} data delivery failed. Tracking ID: ${trackingId}. Please contact us at 050 958 1027 for immediate assistance and refund.`
+    const message = `Your ${packageSize} ${network.toUpperCase()} data order needs attention. Tracking ID: ${trackingId}. Please contact us at 050 958 1027 for assistance.`
     return this.sendSMS({ to: phone, message })
   }
 }

@@ -18,15 +18,18 @@ export async function POST(request: NextRequest) {
       customerDetails
     });
 
-    // Generate unique reference for this transaction
+    // Generate unique reference and tracking ID for this transaction
     const reference = PaystackAPI.generateReference('GD')
+    const trackingId = `TRK${Math.random().toString(36).substring(2, 10).toUpperCase()}`
     
     // Prepare Paystack transaction data
     const paystackData = {
       email: customerDetails.email || `${customerDetails.phoneNumber}@iselldata.com`, // Use phone as fallback email
       amount: PaystackAPI.toPesewas(amount), // Convert to pesewas
       reference: reference,
-      callback_url: process.env.PAYMENT_CALLBACK_URL || `${process.env.NEXT_PUBLIC_BASE_URL}/api/payment/callback`,
+      callback_url: process.env.NODE_ENV === 'development' 
+        ? `http://localhost:3000/success?orderId=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}`
+        : `https://${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}`,
       metadata: {
         orderId: reference,
         customerName: customerDetails.customerName || customerDetails.name || '',
@@ -90,7 +93,6 @@ export async function POST(request: NextRequest) {
     // Create order record
     const packageSizeGB = Number.parseFloat(packageDetails.size.replace('GB', ''))
     const volumeMB = Math.round(packageSizeGB * 1024)
-    const trackingId = `TRK${Math.random().toString(36).substring(2, 10).toUpperCase()}`
 
     const { data: newOrder, error: orderError } = await supabase
       .from('orders')

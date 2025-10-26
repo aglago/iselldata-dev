@@ -54,12 +54,12 @@ const isBusinessHours = () => {
 const getDeliveryInfo = (network: string) => {
   switch (network) {
     case "airteltigo":
-      return { time: "Instant delivery", color: "text-green-600" };
+      return { time: "Instant delivery", color: "text-primary" };
     case "mtn":
     case "telecel":
-      return { time: "15-30 minutes (up to 1 hour)", color: "text-amber-600" };
+      return { time: "15-30 minutes (up to 1 hour)", color: "text-primary" };
     default:
-      return { time: "15-30 minutes", color: "text-blue-600" };
+      return { time: "15-30 minutes", color: "text-primary" };
   }
 };
 
@@ -138,14 +138,9 @@ export function OrderModal({
       
       if (paymentResult.success) {
         
-        // Redirect to Paystack payment page with success callback
-        const successUrl = `${window.location.origin}/success?orderId=${paymentResult.orderId}&trackingId=${paymentResult.trackingId}&amount=${selectedPackage?.price}&package=${selectedPackage?.size}&network=${selectedPackage?.network}&phone=${orderData.phoneNumber}`;
-        
-        // Add success URL to Paystack payment URL
-        const paymentUrl = `${paymentResult.authorizationUrl}&callback_url=${encodeURIComponent(successUrl)}`;
-        
-        // Redirect to Paystack (same window)
-        window.location.href = paymentUrl;
+        // Redirect to Paystack payment page in same tab
+        // Note: callback_url is already set in the backend during transaction initialization
+        window.location.href = paymentResult.authorizationUrl;
       } else {
         throw new Error(paymentResult.message || 'Payment initialization failed');
       }
@@ -253,7 +248,7 @@ export function OrderModal({
             <Button
               onClick={handleContinueToPayment}
               disabled={isProcessing}
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-primary hover:bg-primary/70"
             >
               {isProcessing ? "Opening Payment..." : `Pay GH₵${selectedPackage?.price} with Paystack`}
             </Button>

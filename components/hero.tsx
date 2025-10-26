@@ -23,7 +23,7 @@ export function Hero() {
           </div>
 
           {/* Trust indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className=" max-w-4xl mx-auto">
             <div className="flex items-center justify-center space-x-3">
               <Clock className="h-8 w-8 text-primary" />
               <div className="text-left">
