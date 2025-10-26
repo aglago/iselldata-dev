@@ -68,6 +68,29 @@ export async function GET(request: NextRequest) {
         console.log('Order status updated successfully for transaction:', transactionId, 'Updated rows:', updateResult?.length || 0)
         if (updateResult && updateResult.length === 0) {
           console.warn('No orders were updated - order might not exist or already processed')
+        } else if (updateResult && updateResult.length > 0) {
+          // Trigger data delivery for confirmed payment
+          try {
+            const orderToDeliver = updateResult[0]
+            console.log('Triggering data delivery for manually verified payment:', orderToDeliver.order_id)
+            
+            // Call place-order API to trigger data delivery
+            const deliveryResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/place-order`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                orderId: orderToDeliver.order_id
+              }),
+            })
+            
+            const deliveryResult = await deliveryResponse.json()
+            console.log('Data delivery trigger result:', deliveryResult)
+          } catch (deliveryError) {
+            console.error('Failed to trigger data delivery:', deliveryError)
+            // Don't fail the verification, just log the error
+          }
         }
       }
     }

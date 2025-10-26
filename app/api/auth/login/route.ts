@@ -30,24 +30,35 @@ export async function POST(request: NextRequest) {
 
     // Get user from database
     const supabase = await createClient()
+    console.log('🔍 Looking for user with email:', email)
     const { data: user, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', email)
       .single()
 
+    console.log('🔍 Database query result:', { user: user ? 'found' : 'not found', error: error?.message })
+
     if (error || !user) {
+      console.log('❌ User not found in database')
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
     // Check if password_hash exists
     if (!user.password_hash) {
+      console.log('❌ User found but no password_hash')
       return NextResponse.json({ error: "User not properly configured" }, { status: 401 })
     }
 
+    console.log('🔍 User found, verifying password...')
+    console.log('🔍 Password hash exists:', user.password_hash ? 'yes' : 'no')
+    
     // Verify password
     const passwordMatch = await bcrypt.compare(password, user.password_hash)
+    console.log('🔍 Password match result:', passwordMatch)
+    
     if (!passwordMatch) {
+      console.log('❌ Password does not match')
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 

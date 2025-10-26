@@ -13,6 +13,7 @@ interface HubnetDataRequest {
 }
 
 interface HubnetResponse {
+  event?: string
   status: boolean
   reason: string
   code: string
@@ -21,10 +22,13 @@ interface HubnetResponse {
   payment_id: string
   ip_address: string
   reference: string
+  batch_id?: string
+  amount?: number
   data: {
     status: boolean
     code: string
-    message: string
+    message?: string
+    current_balance?: number
   }
 }
 

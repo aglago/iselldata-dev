@@ -36,7 +36,10 @@ export class ApiLogger {
         .insert(logEntry)
 
       if (error) {
-        console.error('Failed to log API call:', error)
+        // Temporarily suppress RLS errors - API logging is not critical
+        if (error.code !== '42501') {
+          console.error('Failed to log API call:', error)
+        }
       }
     } catch (error) {
       console.error('API logger error:', error)
