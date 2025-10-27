@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
         order.phone,
         packageSizeGB,
         order.order_id,
-        order.phone
+        "0249905548"
       )
       
       // Check for success in multiple ways (Hubnet API can be inconsistent)
