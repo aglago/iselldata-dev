@@ -19,10 +19,24 @@ export default function SuccessPage() {
   
   const [isVerifying, setIsVerifying] = useState(true)
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'failed' | 'pending'>('pending')
+  const [countdown, setCountdown] = useState(10)
 
   useEffect(() => {
     setIsVerifying(false)
     setVerificationStatus('success')
+    
+    // Countdown timer
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          window.location.href = '/'
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    
+    return () => clearInterval(countdownInterval)
   }, [reference])
 
   return (
@@ -38,6 +52,7 @@ export default function SuccessPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-gray-900">Payment Successful!</h1>
             <p className="text-gray-600">Your order has been confirmed and is being processed.</p>
+            <p className="text-sm text-gray-500">Redirecting to home in {countdown} seconds...</p>
           </div>
 
           {/* Order Details */}

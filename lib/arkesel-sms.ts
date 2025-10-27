@@ -58,7 +58,7 @@ export class ArkeselSMS {
 
   async sendOrderConfirmation(phone: string, trackingId: string, packageSize: string, network: string, baseUrl?: string) {
     const trackingUrl = baseUrl ? `${baseUrl}/track/${trackingId}` : `https://iselldata.vercel.app/track/${trackingId}`
-    const message = `Your ${packageSize} ${network.toUpperCase()} data order has been received and is being processed! Tracking ID: ${trackingId}. Delivery in 15-30 mins. Track: ${trackingUrl} | Support: 050 958 1027`
+    const message = `Your ${packageSize}${network.toUpperCase()} is on it's way! Tracking ID: ${trackingId}. Delivery in 15-30 mins.`
     return this.sendSMS({ to: phone, message })
   }
 

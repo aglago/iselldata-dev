@@ -58,11 +58,7 @@ export function BusinessInfo() {
               <Phone className="w-8 h-8 text-primary mx-auto mb-4" />
               <h3 className="font-semibold text-lg mb-2">Contact Support</h3>
               <p className="text-sm text-muted-foreground">
-                WhatsApp: 050 958 1027
-                <br />
-                MTN MoMo: 024 990 5548
-                <br />
-                Samuella Manye Aglago
+                iselldata@gmail.com
               </p>
             </CardContent>
           </Card>
