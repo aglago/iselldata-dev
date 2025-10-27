@@ -1,0 +1,30 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0891b2"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#gradient)"/>
+  
+  <!-- Logo Container -->
+  <g transform="translate(120, 180)">
+    <!-- Background Circle for Logo -->
+    <circle cx="120" cy="135" r="100" fill="white" fill-opacity="0.15"/>
+    
+    <!-- Large Wifi Icon - Centered and Properly Sized -->
+    <path d="M60 180C60 180 80 120 120 120S180 180 180 180" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <path d="M75 195C75 195 90 150 120 150S165 195 165 195" stroke="white" stroke-width="10" stroke-linecap="round"/>
+    <path d="M90 210C90 210 100 180 120 180S150 210 150 210" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="120" cy="225" r="12" fill="white"/>
+  </g>
+  
+  <!-- Text Content - Better Positioned -->
+  <g transform="translate(350, 200)">
+    <text x="0" y="80" font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="76" font-weight="800" fill="white">iSellData</text>
+    <text x="0" y="140" font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="36" font-weight="500" fill="white" fill-opacity="0.95">Fast &amp; Reliable Data Bundles</text>
+    <text x="0" y="190" font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="28" font-weight="400" fill="white" fill-opacity="0.85">MTN • AirtelTigo • Telecel</text>
+    <text x="0" y="230" font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="24" font-weight="300" fill="white" fill-opacity="0.75">Ghana's Most Trusted Data Provider</text>
+  </g>
+</svg>

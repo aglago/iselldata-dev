@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     siteName: "iSellData",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "iSellData - Fast & Reliable Data Bundles",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "iSellData - Fast & Reliable Data Bundles",
     description: "Trusted data provider for MTN, AirtelTigo, and Telecel networks.",
-    images: ["/og-image.png"],
+    images: ["/og-image.svg"],
   },
 }
 
