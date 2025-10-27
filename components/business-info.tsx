@@ -70,8 +70,6 @@ export function BusinessInfo() {
               <p className="text-sm text-muted-foreground">
                 Nationwide Coverage
                 <br />
-                All Ghana Networks
-                <br />
                 MTN • AirtelTigo • Telecel
               </p>
             </CardContent>

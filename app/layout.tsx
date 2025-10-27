@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "iSellData - Fast & Reliable Data Bundles",
-  description: "Ghana's most trusted data provider for MTN, AirtelTigo, and Telecel networks. Fast delivery, instant activation.",
+  description: "Trusted data provider for MTN, AirtelTigo, and Telecel networks. Fast delivery, instant activation.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "iSellData - Fast & Reliable Data Bundles",
-    description: "Ghana's most trusted data provider for MTN, AirtelTigo, and Telecel networks. Fast delivery, instant activation.",
+    description: "Trusted data provider for MTN, AirtelTigo, and Telecel networks. Fast delivery, instant activation.",
     url: "https://iselldata.vercel.app",
     siteName: "iSellData",
     images: [
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "iSellData - Fast & Reliable Data Bundles",
-    description: "Ghana's most trusted data provider for MTN, AirtelTigo, and Telecel networks.",
+    description: "Trusted data provider for MTN, AirtelTigo, and Telecel networks.",
     images: ["/og-image.png"],
   },
 }
