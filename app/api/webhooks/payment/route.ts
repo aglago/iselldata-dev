@@ -177,7 +177,7 @@ async function processDataDelivery(order: any) {
     order.phone,
     packageSizeGB,
     order.order_id,
-    order.phone
+    '0249905548'
   )
   
   // Check for success - either direct status/code or nested in data
