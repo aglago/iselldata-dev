@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Search, Clock, CheckCircle, XCircle, RefreshCw, ArrowLeft, Phone } from "lucide-react"
+import { Search, Clock, CheckCircle, XCircle, RefreshCw, ArrowLeft, Phone, Smartphone } from "lucide-react"
 import Link from "next/link"
 
 interface OrderStatus {
@@ -159,18 +159,30 @@ export default function TrackOrderPage() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  Placed on {new Date(orderStatus.createdAt).toLocaleDateString()} at{" "}
-                  {new Date(orderStatus.createdAt).toLocaleTimeString()}
+                  Placed on {new Date(orderStatus.createdAt).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })} at {new Date(orderStatus.createdAt).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
+                    <span className="text-muted-foreground">Order ID:</span>
+                    <div className="font-medium">{orderStatus.orderId}</div>
+                  </div>
+                  <div>
                     <span className="text-muted-foreground">Customer:</span>
                     <div className="font-medium">{orderStatus.customer.customerName}</div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="text-muted-foreground">Phone Number:</span>
                     <div className="font-medium">{orderStatus.customer.phoneNumber}</div>
                   </div>
                   <div>
@@ -180,10 +192,34 @@ export default function TrackOrderPage() {
                     </div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Amount:</span>
-                    <div className="font-medium">GH₵{orderStatus.package.price}</div>
+                    <span className="text-muted-foreground">Amount Paid:</span>
+                    <div className="font-medium text-green-600">GH₵{orderStatus.package.price}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Order Date:</span>
+                    <div className="font-medium">{new Date(orderStatus.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric', 
+                      year: 'numeric'
+                    })}</div>
                   </div>
                 </div>
+                
+                {orderStatus.completedAt && (
+                  <div className="pt-3 border-t">
+                    <span className="text-muted-foreground text-sm">Completed:</span>
+                    <p className="font-medium">{new Date(orderStatus.completedAt).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })} at {new Date(orderStatus.completedAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -217,7 +253,15 @@ export default function TrackOrderPage() {
                         <div className="font-medium">{step.step}</div>
                         {step.timestamp && (
                           <div className="text-sm text-muted-foreground">
-                            {new Date(step.timestamp).toLocaleString()}
+                            {new Date(step.timestamp).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })} at {new Date(step.timestamp).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
                           </div>
                         )}
                       </div>
@@ -226,6 +270,84 @@ export default function TrackOrderPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Delivery Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5" />
+                  Delivery Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {orderStatus.status === 'completed' && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800 font-medium">✅ Data bundle delivered successfully!</p>
+                      <p className="text-green-700 text-sm mt-1">
+                        Your {orderStatus.package.size} {orderStatus.package.network.toUpperCase()} data has been added to {orderStatus.customer.phoneNumber}
+                      </p>
+                      {orderStatus.completedAt && (
+                        <p className="text-green-600 text-xs mt-2">
+                          Delivered on {new Date(orderStatus.completedAt).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            month: 'long',
+                            day: 'numeric'
+                          })} at {new Date(orderStatus.completedAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {(orderStatus.status === 'processing' || orderStatus.status === 'payment_confirmed') && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-blue-800 font-medium">🔄 Your order is being processed</p>
+                      <p className="text-blue-700 text-sm mt-1">
+                        Expected delivery: 15-30 minutes (up to 1 hour during peak times)
+                      </p>
+                      <p className="text-blue-600 text-xs mt-2">
+                        You'll receive an SMS confirmation when your data is delivered
+                      </p>
+                    </div>
+                  )}
+                  
+                  {orderStatus.status === 'pending_payment' && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-yellow-800 font-medium">⏳ Awaiting payment confirmation</p>
+                      <p className="text-yellow-700 text-sm mt-1">
+                        Complete your payment to start processing your data bundle
+                      </p>
+                    </div>
+                  )}
+                  
+                  {orderStatus.status === 'failed' && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800 font-medium">❌ Delivery failed</p>
+                      <p className="text-red-700 text-sm mt-1">Please contact support for assistance and refund</p>
+                      <p className="text-red-600 text-xs mt-2">
+                        Our support team will help resolve this issue within 24 hours
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <Link href="/" className="flex-1">
+                <Button variant="outline" className="w-full">
+                  Buy More Data
+                </Button>
+              </Link>
+              <Button variant="default" className="flex-1" onClick={() => window.open('https://wa.me/233509581027', '_blank')}>
+                Contact Support
+              </Button>
+            </div>
 
             {/* Contact Support */}
             <Card>
@@ -237,15 +359,18 @@ export default function TrackOrderPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-4">
-                  If you have any issues with your order, contact our support team.
+                  If you have any issues with your order or need assistance, our support team is here to help.
                 </p>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 bg-transparent">
-                    WhatsApp Support
-                  </Button>
-                  <Button variant="outline" className="flex-1 bg-transparent">
-                    Call Support
-                  </Button>
+                <div className="space-y-2">
+                  <div className="text-sm">
+                    <span className="font-medium">WhatsApp:</span> +233 50 958 1027
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Response Time:</span> Within 24 hours
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Support Hours:</span> 7 AM - 9 PM (Mon-Sat)
+                  </div>
                 </div>
               </CardContent>
             </Card>
