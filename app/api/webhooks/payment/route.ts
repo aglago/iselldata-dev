@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { headers } from "next/headers"
+import { checkLowBalanceAlert } from '@/lib/balance-alert'
 
 export const dynamic = 'force-dynamic'
 
@@ -185,31 +186,19 @@ async function processDataDelivery(order: any) {
                     (hubnetResult.status === 'success' && hubnetResult.data?.status)
   
   if (isSuccess) {
-    // Update order with delivery success
+    // Update order with delivery accepted (not delivered yet - awaiting webhook)
     await supabase
       .from('orders')
       .update({
-        delivery_status: 'delivered',
+        delivery_status: 'accepted',
         hubnet_transaction_id: hubnetResult.transaction_id,
         hubnet_payment_id: hubnetResult.payment_id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id)
     
-    // Send order confirmation SMS with tracking URL
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000'
-      : process.env.NEXT_PUBLIC_BASE_URL?.includes('://') 
-        ? process.env.NEXT_PUBLIC_BASE_URL 
-        : `https://${process.env.NEXT_PUBLIC_BASE_URL}`
-    
-    await smsService.sendOrderConfirmation(
-      order.phone, 
-      order.tracking_id, 
-      order.package_size, 
-      order.network,
-      baseUrl
-    )
+    // Check for low balance and alert admin if needed
+    await checkLowBalanceAlert(hubnetResult)
     
     return {
       success: true,
@@ -237,3 +226,4 @@ async function processDataDelivery(order: any) {
     throw new Error(`Hubnet delivery failed: ${hubnetResult.data?.message || hubnetResult.reason}`)
   }
 }
+

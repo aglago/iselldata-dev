@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { smsService } from "@/lib/arkesel-sms"
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -15,8 +14,14 @@ export async function POST(request: NextRequest) {
     const result = await processHubnetWebhook(payload)
 
     if (result.success) {
-      // Send appropriate SMS notification based on status
-      await handleStatusNotification(result)
+      // Log status update for admin notifications (can be used for toasts)
+      console.log('Order status update:', {
+        orderId: result.orderId,
+        status: result.deliveryStatus,
+        phone: result.phone,
+        volume: result.volume,
+        network: result.network
+      })
     }
 
     return NextResponse.json({
@@ -36,41 +41,48 @@ export async function POST(request: NextRequest) {
 
 async function processHubnetWebhook(payload: any) {
   try {
-    // Extract Hubnet webhook data
+    // Extract Hubnet webhook data (new format)
     const {
-      transaction_id,
-      payment_id,
-      reference, // This is our order ID
+      event,
       status,
-      reason,
+      message,
       code,
-      phone,
-      volume,
-      network,
-      data,
+      data
     } = payload
 
+    const reference = data?.reference
+    const phone = data?.msisdn
+    const volume = data?.volume
+    const network = data?.network
+    const hubnetStatus = data?.status
+
     console.log("Processing Hubnet status update:", {
+      event,
       orderId: reference,
-      transactionId: transaction_id,
       status,
       code,
-      reason,
+      hubnetStatus,
+      message,
     })
 
-    // Determine if transaction was successful
-    const isSuccessful = status === true && code === "0000"
-    const isFailed = status === false || (code !== "0000" && code !== undefined)
+    if (!reference) {
+      console.error('No reference found in Hubnet webhook')
+      return { success: false, message: 'No reference found' }
+    }
+
+    // Map Hubnet webhook events to our delivery status
+    let deliveryStatus = 'processing'
+    
+    if (event === 'transfer.delivered' && status === true) {
+      deliveryStatus = 'delivered'
+    } else if (event === 'transfer.processing') {
+      deliveryStatus = 'processing'  
+    } else if (event === 'transfer.failed' || status === false) {
+      deliveryStatus = 'failed'
+    }
 
     // Update order status in database
     const supabase = await createClient()
-    
-    let deliveryStatus = 'processing'
-    if (isSuccessful) {
-      deliveryStatus = 'delivered'
-    } else if (isFailed) {
-      deliveryStatus = 'failed'
-    }
     
     console.log(`Updating order ${reference} status to: ${deliveryStatus.toUpperCase()}`)
     
@@ -78,8 +90,6 @@ async function processHubnetWebhook(payload: any) {
       .from('orders')
       .update({
         delivery_status: deliveryStatus,
-        hubnet_transaction_id: transaction_id,
-        hubnet_payment_id: payment_id,
         updated_at: new Date().toISOString(),
       })
       .eq('order_id', reference)
@@ -93,15 +103,14 @@ async function processHubnetWebhook(payload: any) {
     return {
       success: true,
       orderId: reference,
-      transactionId: transaction_id,
-      paymentId: payment_id,
       phone,
       volume,
       network,
-      isDelivered: isSuccessful,
-      isFailed,
-      reason: reason || data?.message,
-      code,
+      deliveryStatus,
+      isDelivered: deliveryStatus === 'delivered',
+      isFailed: deliveryStatus === 'failed',
+      event,
+      message,
     }
   } catch (error) {
     console.error("Hubnet webhook payload processing error:", error)
@@ -109,29 +118,6 @@ async function processHubnetWebhook(payload: any) {
   }
 }
 
-async function handleStatusNotification(result: any) {
-  try {
-    const { orderId, phone, volume, network, isDelivered, isFailed, reason } = result
-
-    // Convert volume from MB to GB for user-friendly message
-    const volumeGB = Math.round((Number.parseInt(volume) / 1024) * 10) / 10
-    const packageSize = `${volumeGB}GB`
-
-    // Map Hubnet network codes back to display names
-    const networkDisplay = mapHubnetToDisplay(network)
-
-    if (isDelivered) {
-      await smsService.sendDeliveryConfirmation(phone, orderId, packageSize, networkDisplay)
-      console.log(`Delivery confirmation sent for order ${orderId}`)
-    } else if (isFailed) {
-      await smsService.sendDeliveryFailure(phone, orderId, packageSize, networkDisplay)
-      console.log(`Failure notification sent for order ${orderId}`)
-    }
-    // If status is still pending, no SMS needed yet
-  } catch (error) {
-    console.error("Failed to send status notification:", error)
-  }
-}
 
 function mapHubnetToDisplay(hubnetNetwork: string): string {
   const networkMap = {
