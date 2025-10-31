@@ -1,7 +1,11 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Shield, Clock, CheckCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function Hero() {
+  const router = useRouter();
   return (
     <section className="bg-gradient-to-br from-primary/5 to-secondary/5 py-20 lg:py-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,7 +20,7 @@ export function Hero() {
           </p>
 
           <div className="flex justify-center mb-12">
-            <Button size="lg" className="text-lg px-8">
+            <Button size="lg" className="text-lg px-8" onClick={() => router.push('#packages')}>
               Browse Packages
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
