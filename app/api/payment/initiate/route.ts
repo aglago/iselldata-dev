@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
       amount: PaystackAPI.toPesewas(amount), // Convert to pesewas
       reference: reference,
       callback_url: process.env.NODE_ENV === 'development' 
-        ? `http://localhost:3000/success?orderId=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}&phone=${customerDetails.phoneNumber}`
-        : `https://${process.env.NEXT_PUBLIC_BASE_URL}/success?orderId=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}&phone=${customerDetails.phoneNumber}`,
+        ? `http://localhost:3000/success?reference=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}&phone=${customerDetails.phoneNumber}`
+        : `https://${process.env.NEXT_PUBLIC_BASE_URL}/success?reference=${reference}&trackingId=${trackingId}&amount=${amount}&package=${packageDetails.size}&network=${packageDetails.network}&phone=${customerDetails.phoneNumber}`,
       metadata: {
         orderId: reference,
         customerName: customerDetails.customerName || customerDetails.name || '',
