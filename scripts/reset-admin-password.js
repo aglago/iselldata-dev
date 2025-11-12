@@ -68,8 +68,7 @@ async function resetAdminPassword() {
     const { data, error } = await supabase
       .from('admin_users')
       .update({
-        password_hash: hashedPassword,
-        updated_at: new Date().toISOString()
+        password_hash: hashedPassword
       })
       .eq('email', email)
       .select();

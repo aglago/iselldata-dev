@@ -15,6 +15,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Smartphone, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle, AlertTriangle } from "lucide-react";
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -63,6 +64,40 @@ const getDeliveryInfo = (network: string) => {
   }
 };
 
+const detectNetworkFromPhone = (phoneNumber: string): string | null => {
+  const cleanPhone = phoneNumber.replace(/[\s\-\+]/g, "");
+  
+  // Get first 3 digits after country code or leading zero
+  let prefix = "";
+  if (cleanPhone.startsWith("233") && cleanPhone.length >= 6) {
+    prefix = cleanPhone.substring(3, 6);
+  } else if (cleanPhone.startsWith("0") && cleanPhone.length >= 4) {
+    prefix = cleanPhone.substring(1, 4);
+  } else if (cleanPhone.length >= 3) {
+    // For numbers without prefix, assume it's the direct format
+    prefix = cleanPhone.substring(0, 3);
+  } else {
+    return null;
+  }
+
+  // MTN prefixes
+  if (["024", "054", "055", "059", "025"].includes(prefix)) {
+    return "mtn";
+  }
+  
+  // AirtelTigo prefixes  
+  if (["026", "027", "056", "057"].includes(prefix)) {
+    return "airteltigo";
+  }
+  
+  // Telecel prefixes
+  if (["020", "050"].includes(prefix)) {
+    return "telecel";
+  }
+  
+  return null;
+};
+
 
 export function OrderModal({
   isOpen,
@@ -75,6 +110,17 @@ export function OrderModal({
   });
   const [customerEmail, setCustomerEmail] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [phoneValidation, setPhoneValidation] = useState<{
+    isValid: boolean;
+    detectedNetwork: string | null;
+    message: string;
+    type: "success" | "warning" | "error" | null;
+  }>({
+    isValid: false,
+    detectedNetwork: null,
+    message: "",
+    type: null,
+  });
 
   const businessStatus = isBusinessHours();
   const deliveryInfo = selectedPackage
@@ -83,6 +129,73 @@ export function OrderModal({
 
   const handleInputChange = (field: string, value: string) => {
     setOrderData((prev) => ({ ...prev, [field]: value }));
+    
+    if (field === "phoneNumber") {
+      validatePhoneNumberNetwork(value);
+    }
+  };
+
+  const validatePhoneNumberNetwork = (phone: string) => {
+    const cleanPhone = phone.replace(/[\s\-\+]/g, "");
+    
+    if (!phone.trim()) {
+      setPhoneValidation({
+        isValid: false,
+        detectedNetwork: null,
+        message: "",
+        type: null,
+      });
+      return;
+    }
+
+    // Check if we have at least 3 digits to work with
+    if (cleanPhone.length < 3) {
+      setPhoneValidation({
+        isValid: false,
+        detectedNetwork: null,
+        message: "",
+        type: null,
+      });
+      return;
+    }
+
+    const selectedNetwork = selectedPackage?.network;
+    const detectedNetwork = detectNetworkFromPhone(phone);
+    const networkNames = {
+      mtn: "MTN",
+      airteltigo: "AirtelTigo", 
+      telecel: "Telecel"
+    };
+
+    // If we can't detect the network from first 3 digits, show warning
+    if (!detectedNetwork) {
+      setPhoneValidation({
+        isValid: false,
+        detectedNetwork: null,
+        message: `⚠️ This doesn't appear to be a valid ${networkNames[selectedNetwork as keyof typeof networkNames]} number. Please check the first 3 digits.`,
+        type: "warning",
+      });
+      return;
+    }
+
+    // If detected network doesn't match selected package network
+    if (detectedNetwork !== selectedNetwork) {
+      setPhoneValidation({
+        isValid: false,
+        detectedNetwork,
+        message: `⚠️ This appears to be a ${networkNames[detectedNetwork as keyof typeof networkNames]} number, but you selected a ${networkNames[selectedNetwork as keyof typeof networkNames]} package. Please double-check your number.`,
+        type: "warning",
+      });
+      return;
+    }
+
+    // Valid number for the selected network
+    setPhoneValidation({
+      isValid: true,
+      detectedNetwork,
+      message: `✓ Valid ${networkNames[selectedNetwork as keyof typeof networkNames]} number`,
+      type: "success",
+    });
   };
 
 
@@ -157,6 +270,12 @@ export function OrderModal({
     setOrderData({ phoneNumber: "", customerName: "" });
     setCustomerEmail("");
     setIsProcessing(false);
+    setPhoneValidation({
+      isValid: false,
+      detectedNetwork: null,
+      message: "",
+      type: null,
+    });
     onClose();
   };
 
@@ -214,6 +333,32 @@ export function OrderModal({
                 value={orderData.phoneNumber}
                 onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
               />
+              {phoneValidation.type && phoneValidation.message && (
+                <Alert className={`${
+                  phoneValidation.type === "success" 
+                    ? "border-green-200 bg-green-50" 
+                    : phoneValidation.type === "warning"
+                    ? "border-amber-200 bg-amber-50"
+                    : "border-red-200 bg-red-50"
+                }`}>
+                  {phoneValidation.type === "success" ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertTriangle className={`h-4 w-4 ${
+                      phoneValidation.type === "warning" ? "text-amber-600" : "text-red-600"
+                    }`} />
+                  )}
+                  <AlertDescription className={`text-sm ${
+                    phoneValidation.type === "success" 
+                      ? "text-green-700" 
+                      : phoneValidation.type === "warning"
+                      ? "text-amber-700"
+                      : "text-red-700"
+                  }`}>
+                    {phoneValidation.message}
+                  </AlertDescription>
+                </Alert>
+              )}
               <p className="text-xs text-muted-foreground">
                 Enter the phone number to receive the data bundle
               </p>
