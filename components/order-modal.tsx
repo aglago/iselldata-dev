@@ -128,6 +128,11 @@ export function OrderModal({
     : null;
 
   const handleInputChange = (field: string, value: string) => {
+    // Remove spaces from phone number input in real-time
+    if (field === "phoneNumber") {
+      value = value.replace(/\s+/g, "");
+    }
+    
     setOrderData((prev) => ({ ...prev, [field]: value }));
     
     if (field === "phoneNumber") {
