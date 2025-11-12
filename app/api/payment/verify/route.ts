@@ -73,6 +73,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Additional check for Hubnet transaction ID (prevent duplicate processing)
+    if (order.hubnet_transaction_id) {
+      console.log(`Order ${order.order_id} already has Hubnet transaction: ${order.hubnet_transaction_id}`)
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Order already processed through Hubnet',
+        order: order
+      })
+    }
+
+    // Check delivery status to prevent duplicate processing
+    if (['processing', 'accepted', 'delivered'].includes(order.delivery_status)) {
+      console.log(`Order ${order.order_id} already in delivery status: ${order.delivery_status}`)
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Order already being processed',
+        order: order
+      })
+    }
+
     // Update payment status to confirmed and delivery to processing
     const { error: updateError } = await supabase
       .from('orders')

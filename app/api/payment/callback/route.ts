@@ -105,6 +105,26 @@ export async function POST(request: NextRequest) {
     
     // If payment successful, process data delivery
     if (paymentStatus === 'confirmed') {
+      // Check if order already has Hubnet transaction ID (prevent duplicate processing)
+      if (order.hubnet_transaction_id) {
+        console.log(`Order ${reference} already processed with Hubnet transaction: ${order.hubnet_transaction_id}`)
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Order already processed',
+          orderStatus: { paymentStatus, deliveryStatus: 'already_processed' }
+        })
+      }
+      
+      // Check delivery status to prevent duplicate processing
+      if (['processing', 'accepted', 'delivered'].includes(order.delivery_status)) {
+        console.log(`Order ${reference} already in delivery status: ${order.delivery_status}`)
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Order already in progress',
+          orderStatus: { paymentStatus, deliveryStatus: order.delivery_status }
+        })
+      }
+      
       try {
         const deliveryResult = await processDataDelivery(order)
         console.log('Data delivery result:', deliveryResult)

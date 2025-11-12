@@ -39,15 +39,13 @@ export async function POST(request: NextRequest) {
         success: true, 
         message: 'Payment webhook processed successfully',
         orderStatus: result.status
-      })
+      }, { status: 200 })
     } else {
       return NextResponse.json({ 
         success: false, 
         message: 'Payment processing failed' 
-      }, { status: 500 })
+      }, { status: 200 }) // Return 200 to prevent Paystack retries even on processing failures
     }
-
-    return NextResponse.json({ success: true, message: "Payment webhook processed" })
   } catch (error) {
     console.error("Payment webhook processing error:", error)
     return NextResponse.json({ error: "Payment webhook processing failed" }, { status: 500 })
@@ -135,6 +133,17 @@ async function processPaystackWebhook(payload: any) {
     
     // If payment successful, process data delivery
     if (paymentStatus === 'confirmed') {
+      // Multiple duplicate checks for extra safety
+      if (order.hubnet_transaction_id) {
+        console.log(`Order ${reference} already processed with Hubnet transaction: ${order.hubnet_transaction_id}`)
+        return { success: true, orderId: reference, status: 'already_processed' }
+      }
+      
+      if (['processing', 'accepted', 'delivered'].includes(order.delivery_status)) {
+        console.log(`Order ${reference} already in delivery status: ${order.delivery_status}`)
+        return { success: true, orderId: reference, status: 'already_in_progress' }
+      }
+      
       try {
         const deliveryResult = await processDataDelivery(order)
         console.log('Data delivery result:', deliveryResult)
