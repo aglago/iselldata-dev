@@ -88,27 +88,4 @@ export class ApiLogger {
       network
     })
   }
-
-  static async logOGatewayRequest(
-    endpoint: string,
-    requestData: any,
-    responseData: any,
-    responseStatus: number,
-    responseTimeMs: number,
-    orderId?: string
-  ) {
-    const success = responseStatus >= 200 && responseStatus < 300
-    
-    await this.log({
-      endpoint: `ogateway:${endpoint}`,
-      method: 'POST',
-      requestData,
-      responseData,
-      responseStatus,
-      responseTimeMs,
-      success,
-      errorMessage: !success ? (responseData?.message || `HTTP ${responseStatus}`) : undefined,
-      orderId
-    })
-  }
 }

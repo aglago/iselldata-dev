@@ -25,7 +25,7 @@ const features = [
   {
     icon: Clock,
     title: "24/7 Service",
-    description: "Our automated system works round the clock, so you can buy data anytime.",
+    description: "Our automated system works round the clock, pso you can buy data anytime.",
   },
   {
     icon: Headphones,
