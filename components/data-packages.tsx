@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ShoppingCart, Star, Clock, Calendar } from "lucide-react"
 import { OrderModal } from "@/components/order-modal"
+import { FadeIn } from "@/components/ui/fade-in"
 
 const dataPackages = {
   mtn: [
@@ -88,60 +89,67 @@ export function DataPackages() {
   return (
     <section id="packages" className="py-20 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Tabs value={selectedNetwork} onValueChange={setSelectedNetwork} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-8">
-            <TabsTrigger value="mtn" className="text-sm font-medium">
-              MTN
-            </TabsTrigger>
-            <TabsTrigger value="airteltigo" className="text-sm font-medium">
-              AirtelTigo
-            </TabsTrigger>
-            <TabsTrigger value="telecel" className="text-sm font-medium">
-              Telecel
-            </TabsTrigger>
-          </TabsList>
+        <FadeIn>
+          <Tabs value={selectedNetwork} onValueChange={setSelectedNetwork} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto mb-8">
+              <TabsTrigger value="mtn" className="text-sm font-medium">
+                MTN
+              </TabsTrigger>
+              <TabsTrigger value="airteltigo" className="text-sm font-medium">
+                AirtelTigo
+              </TabsTrigger>
+              <TabsTrigger value="telecel" className="text-sm font-medium">
+                Telecel
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </FadeIn>
 
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-lg">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm font-medium">Delivery Time:</span>
-              <span
-                className={`text-sm font-semibold ${networkInfo[selectedNetwork as keyof typeof networkInfo].color}`}
-              >
-                {networkInfo[selectedNetwork as keyof typeof networkInfo].deliveryTime}
-              </span>
-            </div>
+        <FadeIn delay={0.2} className="text-center mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-lg">
+            <Clock className="w-4 h-4" />
+            <span className="text-sm font-medium">Delivery Time:</span>
+            <span
+              className={`text-sm font-semibold ${networkInfo[selectedNetwork as keyof typeof networkInfo].color}`}
+            >
+              {networkInfo[selectedNetwork as keyof typeof networkInfo].deliveryTime}
+            </span>
           </div>
+        </FadeIn>
+
+        <Tabs value={selectedNetwork} onValueChange={setSelectedNetwork} className="w-full">
 
           {Object.entries(dataPackages).map(([network, packages]) => (
             <TabsContent key={network} value={network}>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
-                {packages.map((pkg) => (
-                  <Card key={pkg.id} className="relative hover:shadow-lg transition-shadow">
-                    {pkg.popular && (
-                      <Badge className="absolute -top-2 left-2 sm:left-4 bg-secondary text-secondary-foreground text-xs">
-                        <Star className="w-3 h-3 mr-1" />
-                        Popular
-                      </Badge>
-                    )}
-                    <CardHeader className="text-center">
-                      <CardTitle className="text-xl sm:text-2xl font-bold text-primary">{pkg.size}</CardTitle>
-                      <CardDescription className="text-xs text-muted-foreground/70 flex items-center justify-center gap-1">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {pkg.duration}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                      <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1">GH₵{pkg.price}</div>
-                      <div className="text-xs text-muted-foreground">{network.toUpperCase()}</div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button className="w-full text-sm" size="sm" onClick={() => handleOrderNow(pkg)}>
-                        <ShoppingCart className="w-3 h-3 mr-1" />
-                        Order
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                {packages.map((pkg, index) => (
+                  <FadeIn key={pkg.id} delay={index * 0.05}>
+                    <Card className="relative hover:shadow-lg transition-shadow">
+                      {pkg.popular && (
+                        <Badge className="absolute -top-2 left-2 sm:left-4 bg-secondary text-secondary-foreground text-xs">
+                          <Star className="w-3 h-3 mr-1" />
+                          Popular
+                        </Badge>
+                      )}
+                      <CardHeader className="text-center">
+                        <CardTitle className="text-xl sm:text-2xl font-bold text-primary">{pkg.size}</CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground/70 flex items-center justify-center gap-1">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {pkg.duration}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="text-center">
+                        <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1">GH₵{pkg.price}</div>
+                        <div className="text-xs text-muted-foreground">{network.toUpperCase()}</div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button className="w-full text-sm" size="sm" onClick={() => handleOrderNow(pkg)}>
+                          <ShoppingCart className="w-3 h-3 mr-1" />
+                          Order
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </FadeIn>
                 ))}
               </div>
             </TabsContent>
