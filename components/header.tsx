@@ -34,6 +34,9 @@ export function Header() {
             <Link href="/track-order" className="hover:text-primary-foreground/80 transition-colors">
               Track Order
             </Link>
+            <Link href="/join-as-agent" className="hover:text-primary-foreground/80 transition-colors">
+             Join as an agent
+            </Link>
             <a href="#contact" className="hover:text-primary-foreground/80 transition-colors">
               Contact
             </a>
@@ -132,7 +135,7 @@ export function Header() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.25, duration: 0.3 }}
-                  href="/join-as-an-agent"
+                  href="/join-as-agent"
                   className="hover:text-primary-foreground/80 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
