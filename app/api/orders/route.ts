@@ -188,9 +188,6 @@ async function processHubnetDataDelivery(orderId: string, paymentReference: stri
           updated_at: new Date().toISOString(),
         })
         .eq("order_id", orderId)
-
-      await smsService.sendDeliveryConfirmation(order.phone, order.tracking_id, order.package_size, order.network)
-
       return {
         success: true,
         message: "Data bundle delivered successfully via network provider",

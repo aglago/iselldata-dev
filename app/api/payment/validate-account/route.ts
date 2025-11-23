@@ -1,4 +1,3 @@
-// app/api/payment/validate-account/route.ts
 
 
 export const dynamic = 'force-dynamic'
